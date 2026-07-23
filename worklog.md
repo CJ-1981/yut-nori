@@ -263,3 +263,45 @@ Stage Summary:
 - Sticks visible as 3D objects with clear thickness (not flat)
 - Top surfaces clearly visible
 - Color distinction between top (light) and edge (dark) is clear
+
+---
+Task ID: 6
+Agent: Main (Super Z)
+Task: (1) Rotate camera 90 degrees after yut landing to show all sticks, (2) Enlarge piece and board dot sizes.
+
+Work Log:
+- Added CameraController component for dynamic camera animation:
+  * Phase 1 (0-1.7s): Top-down view during throw and landing
+  * Phase 2 (1.7-2.0s): Brief pause at top-down after landing
+  * Phase 3 (2.0-3.2s): Smooth camera rotation from top-down [0,8,1.5] to side view [0,2.5,5.5]
+  * Phase 4 (3.2s+): Hold side view showing all sticks with 3D depth
+  * Uses ease-out cubic interpolation for smooth motion
+  * Camera lookAt target adjusts from [0,0,0] to [0,0.15,0] for side view
+- Updated animation timing in YutThrowPanel:
+  * Result display delayed from 2200ms to 3300ms (after camera rotation completes)
+  * Auto-continue delay increased from 2500ms to 3500ms
+- Enlarged board position dots:
+  * Regular dots: r=7 → r=11
+  * Corner dots: r=12 → r=18
+  * Center dot: r=14 → r=20
+  * Highlight ring: r=20 → r=28
+  * Touch target: r=28 → r=38
+  * Glow circle: r=26 → r=34
+  * Stroke widths increased (1.5→2, 3.5→4)
+  * Font sizes increased (9→12, 14→18)
+- Enlarged game pieces:
+  * Piece body: r=11 → r=19
+  * Selected highlight: r=16 → r=26
+  * Shadow: rx=10 → rx=18
+  * Emoji font: 13 → 22
+  * Stack spacing: 14 → 22
+  * Stack indicator font: 10 → 14
+  * Stroke widths increased (1.5→2.5, 3→4)
+
+Stage Summary:
+Both features verified via VLM:
+✅ Camera rotates 90 degrees from top-down to side view after landing
+✅ All 4 sticks visible from side perspective showing 3D shape/thickness
+✅ Board dots are large and clearly visible
+✅ Corner dots larger than regular dots, center dot prominent
+✅ Pieces significantly larger than board dots (1.5-2x), easy to see and interact with

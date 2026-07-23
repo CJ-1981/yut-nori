@@ -58,15 +58,16 @@ export function YutThrowPanel() {
     const result = throwYut();
     setDisplayResult(result);
 
-    // Play result sound after animation completes
+    // Play result sound after throw + land + camera rotation completes
+    // Timeline: throw(1.3s) + land(0.4s) + pause(0.3s) + camera rotate(1.2s) = 3.2s
     setTimeout(() => {
       soundManager.play(result.result.replace('-', '') as any);
       setShowResult(true);
       // Show continue button after showing result
       setTimeout(() => {
         setShowContinue(true);
-      }, 800);
-    }, 2200);
+      }, 600);
+    }, 3300);
   };
 
   const handleAnimationEnd = () => {
@@ -92,7 +93,7 @@ export function YutThrowPanel() {
     if (showContinue) {
       const timer = setTimeout(() => {
         handleContinue();
-      }, 2500);
+      }, 3500);
       return () => clearTimeout(timer);
     }
   }, [showContinue]);

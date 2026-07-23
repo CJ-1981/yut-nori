@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useMemo, useState, useEffect } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { YutThrow } from '@/lib/game/types';
 import { soundManager } from '@/lib/sound/sounds';
@@ -193,6 +193,64 @@ function Ground() {
   );
 }
 
+// Camera controller - animates camera from top-down to side view after landing
+function CameraController({ isThrown }: { isThrown: boolean }) {
+  const { camera } = useThree();
+  const startTime = useRef(0);
+  const phase = useRef<'throw' | 'landed' | 'rotating' | 'done'>('throw');
+
+  // Start positions (top-down) and end positions (side view showing all sticks)
+  const startCam = useRef(new THREE.Vector3(0, 8, 1.5));
+  const midCam = useRef(new THREE.Vector3(0, 8, 1.5)); // during throw
+  // After landing: move to side view at 90 degrees (lower angle, sticks visible from side)
+  const endCam = useRef(new THREE.Vector3(0, 2.5, 5.5));
+
+  useEffect(() => {
+    if (isThrown) {
+      startTime.current = performance.now();
+      phase.current = 'throw';
+      camera.position.copy(startCam.current);
+      camera.lookAt(0, 0, 0);
+    }
+  }, [isThrown, camera]);
+
+  useFrame(() => {
+    if (!isThrown) return;
+    const elapsed = (performance.now() - startTime.current) / 1000;
+    const throwDuration = 1.3;
+    const landDuration = 0.4;
+    // After landing, wait a bit, then rotate camera to side view
+    const waitAfterLand = 0.3;
+    const rotateDuration = 1.2;
+
+    if (elapsed < throwDuration + landDuration) {
+      // During throw and landing - keep top-down view
+      phase.current = 'throw';
+      camera.position.lerp(midCam.current, 0.1);
+      camera.lookAt(0, 0, 0);
+    } else if (elapsed < throwDuration + landDuration + waitAfterLand) {
+      // Just landed - pause briefly at top-down
+      phase.current = 'landed';
+      camera.position.lerp(midCam.current, 0.15);
+      camera.lookAt(0, 0, 0);
+    } else if (elapsed < throwDuration + landDuration + waitAfterLand + rotateDuration) {
+      // Rotating camera to side view (90 degree change)
+      phase.current = 'rotating';
+      const t = (elapsed - throwDuration - landDuration - waitAfterLand) / rotateDuration;
+      const easedT = 1 - Math.pow(1 - t, 3); // ease out
+      camera.position.lerpVectors(midCam.current, endCam.current, easedT);
+      camera.lookAt(0, 0.15, 0);
+    } else {
+      // Final side view - hold position
+      phase.current = 'done';
+      camera.position.lerp(endCam.current, 0.1);
+      camera.lookAt(0, 0.15, 0);
+    }
+  });
+
+  return null;
+}
+
 // Lighting - bright and clear for stick visibility from top-down view
 function Lighting() {
   return (
@@ -234,6 +292,7 @@ export function YutThrow3D({ isThrown, throwResult, onAnimationEnd }: YutThrow3D
       <color attach="background" args={['#FAFAF7']} />
       <fog attach="fog" args={['#FAFAF7', 12, 24]} />
       <Lighting />
+      <CameraController isThrown={isThrown} />
       <Ground />
       {[0, 1, 2, 3].map((i) => (
         <YutStick

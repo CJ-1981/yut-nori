@@ -174,10 +174,10 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
 
           return (
             <g key={`pos-${pos}`} transform={`translate(${svg.cx}, ${svg.cy})`}>
-              {/* Large invisible touch target for highlighted positions (44px min touch target) */}
+              {/* Large invisible touch target for highlighted positions */}
               {isPossible && (
                 <circle
-                  r={28}
+                  r={38}
                   fill="transparent"
                   style={{ cursor: 'pointer' }}
                   onClick={() => onPositionClick(pos)}
@@ -191,16 +191,16 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
               {isPossible && (
                 <>
                   <circle
-                    r={26}
+                    r={34}
                     fill="#10B981"
-                    opacity={0.18}
+                    opacity={0.2}
                     style={{ pointerEvents: 'none' }}
                   />
                   <circle
-                    r={20}
+                    r={28}
                     fill="none"
                     stroke="#10B981"
-                    strokeWidth={3.5}
+                    strokeWidth={4}
                     opacity={0.95}
                     className="animate-pulse"
                     style={{ pointerEvents: 'none' }}
@@ -208,19 +208,19 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
                 </>
               )}
 
-              {/* Position dot - visual only, click handled by touch target above */}
+              {/* Position dot - visual only, much larger now */}
               <circle
-                r={center ? 14 : corner ? 12 : isPossible ? 14 : 7}
+                r={center ? 20 : corner ? 18 : isPossible ? 18 : 11}
                 fill={center ? '#C9184A' : corner ? '#5C3A1A' : '#5C3A1A'}
                 stroke="#3D2410"
-                strokeWidth={1.5}
+                strokeWidth={2}
                 style={{ pointerEvents: 'none' }}
               />
               {center && (
                 <text
                   textAnchor="middle"
-                  dy="5"
-                  fontSize={14}
+                  dy="7"
+                  fontSize={18}
                   fill="#FFE4A8"
                   fontWeight="bold"
                   style={{ pointerEvents: 'none' }}
@@ -232,8 +232,8 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
               {corner && !isPossible && (
                 <text
                   textAnchor="middle"
-                  dy="3"
-                  fontSize="9"
+                  dy="5"
+                  fontSize="12"
                   fill="#FFE4A8"
                   fontWeight="bold"
                   style={{ pointerEvents: 'none' }}
@@ -287,8 +287,8 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
             if (!player) return null;
             const avatar = AVATARS.find((a) => a.id === player.avatarId);
             const color = PLAYER_COLORS[p.playerId];
-            // Offset pieces in a stack horizontally
-            const offset = p.stackSize > 1 ? (p.stackIndex - (p.stackSize - 1) / 2) * 14 : 0;
+            // Offset pieces in a stack horizontally (larger spacing for bigger pieces)
+            const offset = p.stackSize > 1 ? (p.stackIndex - (p.stackSize - 1) / 2) * 22 : 0;
             const isSelected = selectedPieceId === p.pieceId;
             const finalX = svg.cx + offset;
             // Check if this position is a possible move target
@@ -316,24 +316,24 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
               >
                 {/* Selected highlight */}
                 {isSelected && (
-                  <circle r={16} fill="none" stroke="#FCD34D" strokeWidth={3} className="animate-pulse" style={{ pointerEvents: 'none' }} />
+                  <circle r={26} fill="none" stroke="#FCD34D" strokeWidth={4} className="animate-pulse" style={{ pointerEvents: 'none' }} />
                 )}
                 {/* Piece shadow */}
-                <ellipse cx={0} cy={3} rx={10} ry={3} fill="rgba(0,0,0,0.35)" style={{ pointerEvents: 'none' }} />
-                {/* Piece body */}
+                <ellipse cx={0} cy={5} rx={18} ry={5} fill="rgba(0,0,0,0.35)" style={{ pointerEvents: 'none' }} />
+                {/* Piece body - much larger now */}
                 <circle
-                  r={11}
+                  r={19}
                   fill={color}
                   stroke="#000"
-                  strokeWidth={1.5}
+                  strokeWidth={2.5}
                   opacity={p.isCarried ? 0.7 : 1}
                   style={{ pointerEvents: 'none' }}
                 />
-                {/* Avatar emoji */}
+                {/* Avatar emoji - larger */}
                 <text
                   textAnchor="middle"
-                  dy={4}
-                  fontSize={13}
+                  dy={7}
+                  fontSize={22}
                   style={{ pointerEvents: 'none', userSelect: 'none' }}
                 >
                   {avatar?.emoji ?? '●'}
@@ -342,8 +342,8 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
                 {p.stackSize > 1 && p.stackIndex === 0 && (
                   <text
                     textAnchor="middle"
-                    dy={-12}
-                    fontSize={10}
+                    dy={-22}
+                    fontSize={14}
                     fill="#5C3A1A"
                     fontWeight="bold"
                     style={{ pointerEvents: 'none' }}
