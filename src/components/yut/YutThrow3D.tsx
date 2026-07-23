@@ -102,9 +102,15 @@ function YutStick({ index, throwResult, isThrown, onAnimationEnd }: YutStickProp
         startRotZ + (targetRotZ - startRotZ) * easedT,
       );
 
-      // Position settles - arrange sticks in a row, lying on ground
-      const finalX = (index - 1.5) * 0.55;
-      const finalZ = 0;
+      // Position settles - sticks scattered in a 2x2 grid pattern
+      // Grid positions: (0,0)=bottom-left, (1,0)=bottom-right, (0,1)=top-left, (1,1)=top-right
+      const gridX = (index % 2) * 2 - 1; // -1 or 1
+      const gridZ = Math.floor(index / 2) * 2 - 1; // -1 or 1
+      // Add small random offset for natural scatter
+      const scatterX = gridX * 0.7 + (seed.offsetX * 0.15);
+      const scatterZ = gridZ * 0.7 + (seed.offsetZ * 0.15);
+      const finalX = scatterX;
+      const finalZ = scatterZ;
       const startX = seed.offsetX;
       const startZ = seed.offsetZ - 0.5;
       // Y = 0.18 (stick radius) so it rests on ground
@@ -120,7 +126,7 @@ function YutStick({ index, throwResult, isThrown, onAnimationEnd }: YutStickProp
         soundManager.play('stickLand');
       }
     } else {
-      // Final state - settle
+      // Final state - settle in scattered positions
       if (!hasEnded.current) {
         hasEnded.current = true;
         setTimeout(() => onAnimationEnd(), 600);
@@ -128,8 +134,15 @@ function YutStick({ index, throwResult, isThrown, onAnimationEnd }: YutStickProp
       const isFront = throwResult ? throwResult.sticks[index] : false;
       const baseRotZ = Math.PI / 2;
       const flipRotX = isFront ? 0 : Math.PI;
-      meshRef.current.rotation.set(flipRotX, 0, baseRotZ + (index - 1.5) * 0.1);
-      meshRef.current.position.set((index - 1.5) * 0.55, 0.18, 0);
+      // Random rotation variation for natural scatter look
+      const rotVariation = (index - 1.5) * 0.25 + seed.offsetX * 0.1;
+      meshRef.current.rotation.set(flipRotX, 0, baseRotZ + rotVariation);
+      // Scattered final positions
+      const gridX = (index % 2) * 2 - 1;
+      const gridZ = Math.floor(index / 2) * 2 - 1;
+      const scatterX = gridX * 0.7 + (seed.offsetX * 0.15);
+      const scatterZ = gridZ * 0.7 + (seed.offsetZ * 0.15);
+      meshRef.current.position.set(scatterX, 0.18, scatterZ);
     }
   });
 

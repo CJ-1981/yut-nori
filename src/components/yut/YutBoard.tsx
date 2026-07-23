@@ -1,6 +1,6 @@
 'use client';
 
-import { BOARD_POSITIONS, isCorner, getPositionCoord, CORNER_POSITIONS } from '@/lib/game/board';
+import { BOARD_POSITIONS, isCorner, isCenter, isDiagonalPoint, getPositionCoord, CORNER_POSITIONS, CENTER_POSITION } from '@/lib/game/board';
 import { useGameStore } from '@/lib/game/store';
 import { PLAYER_COLORS } from '@/lib/game/store';
 import { AVATARS } from '@/lib/game/types';
@@ -45,20 +45,20 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
   const possibleMoves = useGameStore((s) => s.possibleMoves);
   const { t } = useI18n();
 
-  // Build lines connecting positions - outer ring now has 20 points (0-19)
+  // Build lines connecting positions - outer ring has 20 points (0-19)
   const outerLinePoints = Array.from({ length: 20 }, (_, i) => {
     const c = getPositionCoord(i);
     return coordToSVG(c.x, c.y);
   });
 
-  // Diagonal A: corner 0 (bottom-right) → 20 → 21 → 22 → 23 → corner 10 (top-left)
-  const diagonal1 = [0, 20, 21, 22, 23, 10].map((pos) => {
+  // Diagonal A: corner 0 → 21 → center(20) → 22 → corner 10
+  const diagonal1 = [0, 21, 20, 22, 10].map((pos) => {
     const c = getPositionCoord(pos);
     return coordToSVG(c.x, c.y);
   });
 
-  // Diagonal B: corner 5 (top-right) → 24 → 25 → 26 → 27 → corner 15 (bottom-left)
-  const diagonal2 = [5, 24, 25, 26, 27, 15].map((pos) => {
+  // Diagonal B: corner 5 → 23 → center(20) → 24 → corner 15
+  const diagonal2 = [5, 23, 20, 24, 15].map((pos) => {
     const c = getPositionCoord(pos);
     return coordToSVG(c.x, c.y);
   });
@@ -164,6 +164,11 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
           const svg = coordToSVG(c.x, c.y);
           const isPossible = possibleMoves.some((m) => m.position === pos);
           const corner = isCorner(pos);
+          const center = isCenter(pos);
+          const diagPoint = isDiagonalPoint(pos);
+
+          // Skip rendering diagonal intermediate points as dots (they're on lines)
+          if (diagPoint && !isPossible) return null;
 
           return (
             <g key={`pos-${pos}`} transform={`translate(${svg.cx}, ${svg.cy})`}>
@@ -201,14 +206,40 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
                 </>
               )}
 
-              {/* Position dot - visual only, much larger now */}
-              <circle
-                r={corner ? 18 : isPossible ? 18 : 11}
-                fill={corner ? '#5C3A1A' : '#5C3A1A'}
-                stroke="#3D2410"
-                strokeWidth={2}
-                style={{ pointerEvents: 'none' }}
-              />
+              {/* Center - large distinctive circle */}
+              {center && (
+                <>
+                  <circle r={26} fill="#FFE4A8" opacity={0.5} style={{ pointerEvents: 'none' }} />
+                  <circle
+                    r={20}
+                    fill="#C9184A"
+                    stroke="#3D2410"
+                    strokeWidth={3}
+                    style={{ pointerEvents: 'none' }}
+                  />
+                  <text
+                    textAnchor="middle"
+                    dy="7"
+                    fontSize={18}
+                    fill="#FFE4A8"
+                    fontWeight="bold"
+                    style={{ pointerEvents: 'none' }}
+                  >
+                    中
+                  </text>
+                </>
+              )}
+
+              {/* Position dot - visual only (skip for center, already rendered above) */}
+              {!center && (
+                <circle
+                  r={corner ? 18 : isPossible ? 18 : 11}
+                  fill={corner ? '#5C3A1A' : '#5C3A1A'}
+                  stroke="#3D2410"
+                  strokeWidth={2}
+                  style={{ pointerEvents: 'none' }}
+                />
+              )}
               {/* Position label for corners */}
               {corner && !isPossible && (
                 <text

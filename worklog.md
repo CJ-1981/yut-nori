@@ -378,3 +378,38 @@ Stage Summary:
 - Diagonal shortcuts available at all 4 corners
 - VLM verified: 6 dots per side, 5 intervals, correct corner labels, diagonals present
 - Piece movement verified: Do moves piece exactly 1 position from start
+
+---
+Task ID: 9
+Agent: Main (Super Z)
+Task: (1) Replace 4 center intermediate points with one large center circle, (2) Make 4 yut sticks scatter (not in a line) when landing.
+
+Work Log:
+- Redesigned board with shared center point:
+  * Added CENTER_POSITION = 20 at coordinates (2.5, 2.5)
+  * Reduced total positions from 28 to 25 (20 outer + 1 center + 4 diagonal intermediates)
+  * Diagonal A: corner 0 → 21(4.17,0.83) → center(20) → 22(0.83,4.17) → corner 10
+  * Diagonal B: corner 5 → 23(4.17,4.17) → center(20) → 24(0.83,0.83) → corner 15
+  * Both diagonals pass through center (5 intervals each)
+  * Updated NEXT_MAP, PREV_MAP for new diagonal paths through center
+- Updated YutBoard rendering:
+  * Diagonal lines now connect: 0→21→20→22→10 and 5→23→20→24→15
+  * Center rendered as large distinctive circle (r=20, red #C9184A with "中" character)
+  * Center has glow halo (r=26, light amber)
+  * Diagonal intermediate points (21-24) not rendered as dots (only on lines)
+  * Restored isCenter() function and import
+- Made yut sticks scatter on landing:
+  * Changed from linear arrangement to 2x2 grid pattern
+  * Grid positions: index 0=(-1,-1), 1=(1,-1), 2=(-1,1), 3=(1,1)
+  * Added small random offset (seed.offsetX * 0.15) for natural scatter
+  * Added rotation variation per stick for natural look
+  * Sticks now land in 2 pairs (upper and lower), clearly separated
+
+Stage Summary:
+Both features verified via VLM:
+✅ Large red center circle with "中" character at board center
+✅ Diagonal lines pass through center circle
+✅ Only one big circle (not 4 small dots) at center
+✅ 6 dots per side confirmed on outer square
+✅ 4 yut sticks scattered (not in line) after landing
+✅ All 4 sticks clearly visible in scattered arrangement
