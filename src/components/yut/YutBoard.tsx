@@ -20,6 +20,18 @@ function coordToSVG(x: number, y: number): { cx: number; cy: number } {
   };
 }
 
+// Home positions for each player (outside the board, near start position)
+// Player 0: bottom-right area (near start at (4,0))
+// Player 1: top-right area
+// Player 2: top-left area
+// Player 3: bottom-left area
+const HOME_POSITIONS = [
+  { cx: BOARD_SIZE - 15, cy: BOARD_SIZE - 15 }, // P0: bottom-right corner outside
+  { cx: BOARD_SIZE - 15, cy: 15 },              // P1: top-right corner outside
+  { cx: 15, cy: 15 },                           // P2: top-left corner outside
+  { cx: 15, cy: BOARD_SIZE - 15 },              // P3: bottom-left corner outside
+];
+
 interface YutBoardProps {
   onPositionClick: (pos: number) => void;
   highlightedPositions: number[];
@@ -247,7 +259,7 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
 
         {/* Render pieces - each piece animates independently to its position */}
         {(() => {
-          // Build a list of all pieces on the board with their positions
+          // Build a list of all pieces (including home pieces for animation)
           const allPieces: Array<{
             pieceId: string;
             playerId: number;
@@ -259,57 +271,70 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
 
           for (const player of players) {
             for (const piece of player.pieces) {
-              if (piece.position >= 0) {
-                const isCarried = players
-                  .find((p) => p.id === player.id)
-                  ?.pieces.some((p) => p.carrying.includes(piece.id)) ?? false;
-                // Find stack index at this position for this player
-                const piecesAtSamePos = player.pieces.filter(
-                  (p) => p.position === piece.position && p.position !== -2
-                );
-                const stackIndex = piecesAtSamePos.findIndex((p) => p.id === piece.id);
-                allPieces.push({
-                  pieceId: piece.id,
-                  playerId: piece.playerId,
-                  position: piece.position,
-                  isCarried,
-                  stackIndex: stackIndex >= 0 ? stackIndex : 0,
-                  stackSize: piecesAtSamePos.length,
-                });
-              }
+              if (piece.position === -2) continue; // finished, don't render
+              // Include both home (-1) and board (>=0) pieces
+              const isCarried = players
+                .find((p) => p.id === player.id)
+                ?.pieces.some((p) => p.carrying.includes(piece.id)) ?? false;
+              // Find stack index at this position for this player
+              const piecesAtSamePos = player.pieces.filter(
+                (p) => p.position === piece.position && p.position >= 0
+              );
+              const stackIndex = piecesAtSamePos.findIndex((p) => p.id === piece.id);
+              allPieces.push({
+                pieceId: piece.id,
+                playerId: piece.playerId,
+                position: piece.position,
+                isCarried,
+                stackIndex: stackIndex >= 0 ? stackIndex : 0,
+                stackSize: piece.position >= 0 ? piecesAtSamePos.length : 1,
+              });
             }
           }
 
           return allPieces.map((p) => {
-            const c = getPositionCoord(p.position);
-            const svg = coordToSVG(c.x, c.y);
             const player = players.find((pl) => pl.id === p.playerId);
             if (!player) return null;
             const avatar = AVATARS.find((a) => a.id === player.avatarId);
             const color = PLAYER_COLORS[p.playerId];
-            // Offset pieces in a stack horizontally (larger spacing for bigger pieces)
-            const offset = p.stackSize > 1 ? (p.stackIndex - (p.stackSize - 1) / 2) * 22 : 0;
+
+            // Determine position: home or board
+            let finalX: number;
+            let finalY: number;
+            let isHome = false;
+            if (p.position === -1) {
+              // Home position - use player's home area
+              const homePos = HOME_POSITIONS[p.playerId] ?? HOME_POSITIONS[0];
+              finalX = homePos.cx;
+              finalY = homePos.cy;
+              isHome = true;
+            } else {
+              const c = getPositionCoord(p.position);
+              const svg = coordToSVG(c.x, c.y);
+              // Offset pieces in a stack horizontally
+              const offset = p.stackSize > 1 ? (p.stackIndex - (p.stackSize - 1) / 2) * 22 : 0;
+              finalX = svg.cx + offset;
+              finalY = svg.cy;
+            }
+
             const isSelected = selectedPieceId === p.pieceId;
-            const finalX = svg.cx + offset;
             // Check if this position is a possible move target
-            const isPossibleTarget = possibleMoves.some((m) => m.position === p.position);
+            const isPossibleTarget = !isHome && possibleMoves.some((m) => m.position === p.position);
+            const pieceScale = isHome ? 0.65 : 1; // smaller at home
 
             return (
               <g
                 key={p.pieceId}
                 style={{
-                  transform: `translate(${finalX}px, ${svg.cy}px)`,
+                  transform: `translate(${finalX}px, ${finalY}px) scale(${pieceScale})`,
                   transition: 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                  // If this is a possible target, let clicks pass through to position handler
-                  // Otherwise, allow piece selection
-                  cursor: isPossibleTarget ? 'pointer' : (p.playerId === currentPlayerIndex && !p.isCarried ? 'pointer' : 'default'),
+                  cursor: isPossibleTarget ? 'pointer' : (p.playerId === currentPlayerIndex && !p.isCarried && !isHome ? 'pointer' : 'default'),
                   pointerEvents: isPossibleTarget ? 'none' : 'auto',
                 }}
                 onClick={(e) => {
-                  // If position is a possible target, don't select piece - let position click handle it
                   if (isPossibleTarget) return;
                   e.stopPropagation();
-                  if (p.playerId === currentPlayerIndex && !p.isCarried) {
+                  if (p.playerId === currentPlayerIndex && !p.isCarried && !isHome) {
                     selectPiece(selectedPieceId === p.pieceId ? null : p.pieceId);
                   }
                 }}
@@ -339,7 +364,7 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
                   {avatar?.emoji ?? '●'}
                 </text>
                 {/* Stack indicator - show count on first piece of stack */}
-                {p.stackSize > 1 && p.stackIndex === 0 && (
+                {p.stackSize > 1 && p.stackIndex === 0 && !isHome && (
                   <text
                     textAnchor="middle"
                     dy={-22}

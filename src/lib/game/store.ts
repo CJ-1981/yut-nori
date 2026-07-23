@@ -50,6 +50,7 @@ export interface GameStore {
   computePossibleMoves: () => void;
   canMoveAnyPiece: () => boolean;
   skipTurn: () => void;
+  _completeMove: (pieceId: string, targetPos: number, targetPath: PathType, isFinish: boolean) => void;
 }
 
 const PLAYER_COLORS = ['#E85D04', '#1B6CA8', '#C9184A', '#386641'];
@@ -216,6 +217,46 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   movePiece: (pieceId, targetPos, targetPath, isFinish) => {
+    const state = get();
+    const player = state.players[state.currentPlayerIndex];
+    const piece = player.pieces.find((p) => p.id === pieceId);
+    if (!piece) return;
+
+    const wasAtHome = piece.position === -1;
+    const startPos = targetPos; // final target position
+
+    // If piece is coming from home, first animate it to start (position 0)
+    // then to the final position after a short delay
+    if (wasAtHome && !isFinish) {
+      // Step 1: Move piece to start (position 0) first
+      const intermediatePlayers = state.players.map((p) => {
+        if (p.id !== player.id) return p;
+        return {
+          ...p,
+          pieces: p.pieces.map((pc) =>
+            pc.id === pieceId
+              ? { ...pc, position: 0, pathType: 'outer' as PathType, carrying: [] }
+              : pc
+          ),
+        };
+      });
+      set({
+        players: intermediatePlayers,
+        possibleMoves: [],
+        selectedPieceId: null,
+      });
+
+      // Step 2: After delay, move to final position
+      setTimeout(() => {
+        get()._completeMove(pieceId, startPos, targetPath, isFinish);
+      }, 500);
+      return;
+    }
+
+    get()._completeMove(pieceId, startPos, targetPath, isFinish);
+  },
+
+  _completeMove: (pieceId, targetPos, targetPath, isFinish) => {
     const state = get();
     const player = state.players[state.currentPlayerIndex];
     const piece = player.pieces.find((p) => p.id === pieceId);

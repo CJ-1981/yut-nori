@@ -166,6 +166,10 @@ export function YutThrowPanel() {
                     </div>
                   )}
                 </div>
+                {/* Camera control hint */}
+                <div className="pointer-events-none px-4 py-1.5 bg-stone-800/80 text-white text-xs rounded-full backdrop-blur">
+                  👆 Drag to rotate camera · Pinch to zoom
+                </div>
                 {showContinue && (
                   <button
                     onClick={handleContinue}

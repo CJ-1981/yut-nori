@@ -305,3 +305,38 @@ Both features verified via VLM:
 ✅ Board dots are large and clearly visible
 ✅ Corner dots larger than regular dots, center dot prominent
 ✅ Pieces significantly larger than board dots (1.5-2x), easy to see and interact with
+
+---
+Task ID: 7
+Agent: Main (Super Z)
+Task: (1) Add animation when piece moves from home to start position, (2) Change camera angle to top-down after yut landing, (3) Allow user to control camera angle in real-time with fingers.
+
+Work Log:
+- Added piece spawn animation from home to board:
+  * Home pieces now rendered on board at corner positions (smaller scale 0.65)
+  * When piece moves from home, store first moves it to position 0 (start), then after 500ms delay moves to final position
+  * CSS transition creates smooth slide animation: home → start → final position
+  * Added HOME_POSITIONS array for each player's home area (4 corners outside board)
+  * Home pieces are smaller and non-interactive
+- Changed camera angle after landing from side view to high angle top-down:
+  * Start camera: [0, 8, 0.5] (nearly straight down)
+  * End camera: [0, 5.5, 4] (high angle looking down at sticks)
+  * Shows all sticks clearly from above at an angle
+- Added real-time camera control with OrbitControls (drei):
+  * InteractiveControls component enabled after camera animation completes
+  * User can drag to rotate camera (enableRotate)
+  * User can pinch/scroll to zoom (enableZoom)
+  * Pan disabled to keep focus on sticks (enablePan=false)
+  * Polar angle limits: 0.1 (nearly top-down) to PI/2-0.1 (not below ground)
+  * Zoom limits: 3 to 10 distance
+  * touchAction: 'none' on canvas for proper touch handling
+  * Added "👆 Drag to rotate camera · Pinch to zoom" hint
+- Used key prop on SceneContent to reset state on new throw (avoids setState in effect lint error)
+
+Stage Summary:
+All 3 features verified via VLM:
+✅ Home pieces visible at board corners (smaller, non-interactive)
+✅ Pieces animate from home → start → final position when brought out
+✅ Camera rotates to high angle top-down view after landing
+✅ All 4 sticks clearly visible from above
+✅ OrbitControls enabled for user camera manipulation (rotate + zoom)

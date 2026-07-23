@@ -2,6 +2,7 @@
 
 import { useRef, useMemo, useState, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { YutThrow } from '@/lib/game/types';
 import { soundManager } from '@/lib/sound/sounds';
@@ -193,62 +194,90 @@ function Ground() {
   );
 }
 
-// Camera controller - animates camera from top-down to side view after landing
-function CameraController({ isThrown }: { isThrown: boolean }) {
+// Camera controller - animates camera from top-down to high angle after landing
+// After animation completes, user can control camera with OrbitControls
+function CameraController({ isThrown, onAnimationDone }: { isThrown: boolean; onAnimationDone: () => void }) {
   const { camera } = useThree();
   const startTime = useRef(0);
   const phase = useRef<'throw' | 'landed' | 'rotating' | 'done'>('throw');
+  const doneCalled = useRef(false);
 
-  // Start positions (top-down) and end positions (side view showing all sticks)
-  const startCam = useRef(new THREE.Vector3(0, 8, 1.5));
-  const midCam = useRef(new THREE.Vector3(0, 8, 1.5)); // during throw
-  // After landing: move to side view at 90 degrees (lower angle, sticks visible from side)
-  const endCam = useRef(new THREE.Vector3(0, 2.5, 5.5));
+  // Start: top-down view (high up, looking straight down)
+  const startCam = useRef(new THREE.Vector3(0, 8, 0.5));
+  // End: high angle looking down at sticks (between top-down and side view)
+  // This shows all sticks clearly from above at an angle
+  const endCam = useRef(new THREE.Vector3(0, 5.5, 4));
 
   useEffect(() => {
     if (isThrown) {
       startTime.current = performance.now();
       phase.current = 'throw';
+      doneCalled.current = false;
       camera.position.copy(startCam.current);
       camera.lookAt(0, 0, 0);
     }
   }, [isThrown, camera]);
 
   useFrame(() => {
-    if (!isThrown) return;
+    if (!isThrown || phase.current === 'done') return;
     const elapsed = (performance.now() - startTime.current) / 1000;
     const throwDuration = 1.3;
     const landDuration = 0.4;
-    // After landing, wait a bit, then rotate camera to side view
     const waitAfterLand = 0.3;
     const rotateDuration = 1.2;
 
     if (elapsed < throwDuration + landDuration) {
       // During throw and landing - keep top-down view
       phase.current = 'throw';
-      camera.position.lerp(midCam.current, 0.1);
+      camera.position.lerp(startCam.current, 0.1);
       camera.lookAt(0, 0, 0);
     } else if (elapsed < throwDuration + landDuration + waitAfterLand) {
       // Just landed - pause briefly at top-down
       phase.current = 'landed';
-      camera.position.lerp(midCam.current, 0.15);
+      camera.position.lerp(startCam.current, 0.15);
       camera.lookAt(0, 0, 0);
     } else if (elapsed < throwDuration + landDuration + waitAfterLand + rotateDuration) {
-      // Rotating camera to side view (90 degree change)
+      // Rotating camera to high angle view
       phase.current = 'rotating';
       const t = (elapsed - throwDuration - landDuration - waitAfterLand) / rotateDuration;
       const easedT = 1 - Math.pow(1 - t, 3); // ease out
-      camera.position.lerpVectors(midCam.current, endCam.current, easedT);
+      camera.position.lerpVectors(startCam.current, endCam.current, easedT);
       camera.lookAt(0, 0.15, 0);
     } else {
-      // Final side view - hold position
+      // Animation complete - hand over control to user (OrbitControls)
       phase.current = 'done';
-      camera.position.lerp(endCam.current, 0.1);
+      camera.position.copy(endCam.current);
       camera.lookAt(0, 0.15, 0);
+      if (!doneCalled.current) {
+        doneCalled.current = true;
+        onAnimationDone();
+      }
     }
   });
 
   return null;
+}
+
+// Interactive camera controls - only enabled after animation completes
+function InteractiveControls({ enabled }: { enabled: boolean }) {
+  const { camera } = useThree();
+  const controlsRef = useRef<any>(null);
+
+  return (
+    <OrbitControls
+      ref={controlsRef}
+      enabled={enabled}
+      enablePan={false}
+      enableZoom={true}
+      enableRotate={true}
+      minDistance={3}
+      maxDistance={10}
+      minPolarAngle={0.1} // nearly top-down
+      maxPolarAngle={Math.PI / 2 - 0.1} // not below ground
+      target={[0, 0.15, 0]}
+      makeDefault
+    />
+  );
 }
 
 // Lighting - bright and clear for stick visibility from top-down view
@@ -284,15 +313,36 @@ export function YutThrow3D({ isThrown, throwResult, onAnimationEnd }: YutThrow3D
   return (
     <Canvas
       shadows
-      camera={{ position: [0, 8, 1.5], fov: 45 }}
-      style={{ width: '100%', height: '100%', background: '#FAFAF7' }}
+      camera={{ position: [0, 8, 0.5], fov: 45 }}
+      style={{ width: '100%', height: '100%', background: '#FAFAF7', touchAction: 'none' }}
       gl={{ alpha: false, antialias: true }}
       dpr={[1, 2]}
     >
       <color attach="background" args={['#FAFAF7']} />
       <fog attach="fog" args={['#FAFAF7', 12, 24]} />
       <Lighting />
-      <CameraController isThrown={isThrown} />
+      <SceneContent
+        key={isThrown ? 'throwing' : 'idle'}
+        isThrown={isThrown}
+        throwResult={throwResult}
+        onAnimationEnd={onAnimationEnd}
+      />
+    </Canvas>
+  );
+}
+
+// Inner component that manages camera animation and interactive controls state
+// Keyed by isThrown so it remounts (resetting state) when a new throw starts
+function SceneContent({ isThrown, throwResult, onAnimationEnd }: YutThrow3DProps) {
+  const [cameraAnimationDone, setCameraAnimationDone] = useState(false);
+
+  return (
+    <>
+      <CameraController
+        isThrown={isThrown}
+        onAnimationDone={() => setCameraAnimationDone(true)}
+      />
+      <InteractiveControls enabled={cameraAnimationDone} />
       <Ground />
       {[0, 1, 2, 3].map((i) => (
         <YutStick
@@ -303,6 +353,6 @@ export function YutThrow3D({ isThrown, throwResult, onAnimationEnd }: YutThrow3D
           onAnimationEnd={onAnimationEnd}
         />
       ))}
-    </Canvas>
+    </>
   );
 }
