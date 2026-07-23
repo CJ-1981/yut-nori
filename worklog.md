@@ -236,3 +236,30 @@ All 6 issues resolved and browser-verified:
 ✅ Position selection works even with opponent pieces present (pointer events pass-through)
 - Lint passes cleanly
 - VLM verified: camera angle high, no red markers, large touch targets
+
+---
+Task ID: 5
+Agent: Main (Super Z)
+Task: Raise 3D camera angle further - sticks still looked flat from previous angle.
+
+Work Log:
+- Raised camera position significantly:
+  * From [0, 4.5, 3.5] to [0, 8, 1.5] (much higher, nearly top-down view)
+  * FOV reduced from 50 to 45 for less distortion at height
+- Increased stick thickness for better visibility from top:
+  * Radius: 0.13 → 0.18 (40% thicker)
+  * Length: 2.0 → 1.8 (slightly shorter for better proportion)
+  * Flat back box: 0.06 → 0.08 depth (thicker)
+- Updated resting Y position from 0.13 to 0.18 to match new radius
+- Enhanced lighting for top-down view:
+  * Ambient: 0.9 → 0.95
+  * Main directional: position [3,8,4] → [2,12,3], intensity 1.4 → 1.5
+  * Fill light: position [-3,6,-2] → [-3,8,-2], intensity 0.5 → 0.6
+  * Point light: position [0,5,2] → [0,6,2], intensity 0.4 → 0.5
+  * Shadow camera bounds expanded to ±6
+
+Stage Summary:
+- VLM verified: camera angle now 70-80 degrees (near top-down "God's eye" view)
+- Sticks visible as 3D objects with clear thickness (not flat)
+- Top surfaces clearly visible
+- Color distinction between top (light) and edge (dark) is clear

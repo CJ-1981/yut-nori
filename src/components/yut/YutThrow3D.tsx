@@ -106,10 +106,10 @@ function YutStick({ index, throwResult, isThrown, onAnimationEnd }: YutStickProp
       const finalZ = 0;
       const startX = seed.offsetX;
       const startZ = seed.offsetZ - 0.5;
-      // Y = 0.13 (stick radius) so it rests on ground
+      // Y = 0.18 (stick radius) so it rests on ground
       meshRef.current.position.set(
         THREE.MathUtils.lerp(startX, finalX, easedT),
-        THREE.MathUtils.lerp(0.4, 0.13, easedT),
+        THREE.MathUtils.lerp(0.4, 0.18, easedT),
         THREE.MathUtils.lerp(startZ, finalZ, easedT),
       );
 
@@ -128,7 +128,7 @@ function YutStick({ index, throwResult, isThrown, onAnimationEnd }: YutStickProp
       const baseRotZ = Math.PI / 2;
       const flipRotX = isFront ? 0 : Math.PI;
       meshRef.current.rotation.set(flipRotX, 0, baseRotZ + (index - 1.5) * 0.1);
-      meshRef.current.position.set((index - 1.5) * 0.55, 0.13, 0);
+      meshRef.current.position.set((index - 1.5) * 0.55, 0.18, 0);
     }
   });
 
@@ -137,12 +137,11 @@ function YutStick({ index, throwResult, isThrown, onAnimationEnd }: YutStickProp
   // When laid flat (Z rot = PI/2), the length runs along X.
   // - Round half (FRONT) = LIGHT bamboo color (#E8C887)
   // - Flat half (BACK) = DARK brown (#2D1810)
-  // - Red line marker on the flat (dark) side
   return (
     <group ref={meshRef} position={[0, 0.4, -0.5]}>
-      {/* Round front half (LIGHT) - half cylinder */}
+      {/* Round front half (LIGHT) - half cylinder, thicker for better visibility from top */}
       <mesh castShadow receiveShadow>
-        <cylinderGeometry args={[0.13, 0.13, 2.0, 24, 1, false, 0, Math.PI]} />
+        <cylinderGeometry args={[0.18, 0.18, 1.8, 24, 1, false, 0, Math.PI]} />
         <meshStandardMaterial
           color="#E8C887"
           roughness={0.5}
@@ -151,9 +150,9 @@ function YutStick({ index, throwResult, isThrown, onAnimationEnd }: YutStickProp
         />
       </mesh>
 
-      {/* Flat back half (DARK) - thin box filling the flat side */}
-      <mesh castShadow receiveShadow position={[0, 0, -0.065]}>
-        <boxGeometry args={[0.26, 2.0, 0.06]} />
+      {/* Flat back half (DARK) - thicker box for better visibility from top */}
+      <mesh castShadow receiveShadow position={[0, 0, -0.09]}>
+        <boxGeometry args={[0.36, 1.8, 0.08]} />
         <meshStandardMaterial
           color="#2D1810"
           roughness={0.85}
@@ -162,22 +161,22 @@ function YutStick({ index, throwResult, isThrown, onAnimationEnd }: YutStickProp
       </mesh>
 
       {/* End caps - front (LIGHT) */}
-      <mesh position={[0, 1.0, 0]}>
-        <cylinderGeometry args={[0.13, 0.13, 0.04, 24, 1, false, 0, Math.PI]} />
+      <mesh position={[0, 0.9, 0]}>
+        <cylinderGeometry args={[0.18, 0.18, 0.05, 24, 1, false, 0, Math.PI]} />
         <meshStandardMaterial color="#D4A856" roughness={0.5} metalness={0.1} />
       </mesh>
-      <mesh position={[0, -1.0, 0]}>
-        <cylinderGeometry args={[0.13, 0.13, 0.04, 24, 1, false, 0, Math.PI]} />
+      <mesh position={[0, -0.9, 0]}>
+        <cylinderGeometry args={[0.18, 0.18, 0.05, 24, 1, false, 0, Math.PI]} />
         <meshStandardMaterial color="#D4A856" roughness={0.5} metalness={0.1} />
       </mesh>
 
       {/* End caps - back (DARK) */}
-      <mesh position={[0, 1.0, -0.065]}>
-        <boxGeometry args={[0.26, 0.04, 0.06]} />
+      <mesh position={[0, 0.9, -0.09]}>
+        <boxGeometry args={[0.36, 0.05, 0.08]} />
         <meshStandardMaterial color="#2D1810" roughness={0.85} />
       </mesh>
-      <mesh position={[0, -1.0, -0.065]}>
-        <boxGeometry args={[0.26, 0.04, 0.06]} />
+      <mesh position={[0, -0.9, -0.09]}>
+        <boxGeometry args={[0.36, 0.05, 0.08]} />
         <meshStandardMaterial color="#2D1810" roughness={0.85} />
       </mesh>
     </group>
@@ -194,25 +193,25 @@ function Ground() {
   );
 }
 
-// Lighting - bright and clear for stick visibility from above
+// Lighting - bright and clear for stick visibility from top-down view
 function Lighting() {
   return (
     <>
-      <ambientLight intensity={0.9} />
+      <ambientLight intensity={0.95} />
       <directionalLight
-        position={[3, 8, 4]}
-        intensity={1.4}
+        position={[2, 12, 3]}
+        intensity={1.5}
         castShadow
         shadow-mapSize={[2048, 2048]}
-        shadow-camera-far={25}
-        shadow-camera-left={-5}
-        shadow-camera-right={5}
-        shadow-camera-top={5}
-        shadow-camera-bottom={-5}
+        shadow-camera-far={30}
+        shadow-camera-left={-6}
+        shadow-camera-right={6}
+        shadow-camera-top={6}
+        shadow-camera-bottom={-6}
         shadow-bias={-0.0005}
       />
-      <directionalLight position={[-3, 6, -2]} intensity={0.5} color="#FFFAF0" />
-      <pointLight position={[0, 5, 2]} intensity={0.4} color="#FFFFFF" />
+      <directionalLight position={[-3, 8, -2]} intensity={0.6} color="#FFFAF0" />
+      <pointLight position={[0, 6, 2]} intensity={0.5} color="#FFFFFF" />
     </>
   );
 }
@@ -227,13 +226,13 @@ export function YutThrow3D({ isThrown, throwResult, onAnimationEnd }: YutThrow3D
   return (
     <Canvas
       shadows
-      camera={{ position: [0, 4.5, 3.5], fov: 50 }}
+      camera={{ position: [0, 8, 1.5], fov: 45 }}
       style={{ width: '100%', height: '100%', background: '#FAFAF7' }}
       gl={{ alpha: false, antialias: true }}
       dpr={[1, 2]}
     >
       <color attach="background" args={['#FAFAF7']} />
-      <fog attach="fog" args={['#FAFAF7', 10, 20]} />
+      <fog attach="fog" args={['#FAFAF7', 12, 24]} />
       <Lighting />
       <Ground />
       {[0, 1, 2, 3].map((i) => (
