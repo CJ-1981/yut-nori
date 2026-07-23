@@ -1,16 +1,15 @@
 'use client';
 
-import { BOARD_POSITIONS, isCorner, isCenter, getPositionCoord, CORNER_POSITIONS } from '@/lib/game/board';
+import { BOARD_POSITIONS, isCorner, getPositionCoord, CORNER_POSITIONS } from '@/lib/game/board';
 import { useGameStore } from '@/lib/game/store';
 import { PLAYER_COLORS } from '@/lib/game/store';
 import { AVATARS } from '@/lib/game/types';
 import { useI18n } from '@/lib/i18n/I18nContext';
 
-// Convert board coordinates (0-4) to SVG coordinates
-// Board is rendered as an SVG with padding
+// Convert board coordinates (0-5) to SVG coordinates for 6x6 grid
 const BOARD_SIZE = 500;
 const PADDING = 40;
-const GRID_SIZE = (BOARD_SIZE - PADDING * 2) / 4;
+const GRID_SIZE = (BOARD_SIZE - PADDING * 2) / 5;
 
 function coordToSVG(x: number, y: number): { cx: number; cy: number } {
   // Flip y so 0 is bottom
@@ -46,28 +45,23 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
   const possibleMoves = useGameStore((s) => s.possibleMoves);
   const { t } = useI18n();
 
-  // Build lines connecting positions
-  const outerLinePoints = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map((pos) => {
+  // Build lines connecting positions - outer ring now has 20 points (0-19)
+  const outerLinePoints = Array.from({ length: 20 }, (_, i) => {
+    const c = getPositionCoord(i);
+    return coordToSVG(c.x, c.y);
+  });
+
+  // Diagonal A: corner 0 (bottom-right) → 20 → 21 → 22 → 23 → corner 10 (top-left)
+  const diagonal1 = [0, 20, 21, 22, 23, 10].map((pos) => {
     const c = getPositionCoord(pos);
     return coordToSVG(c.x, c.y);
   });
 
-  // Diagonal lines (corner to corner through center)
-  const diagonal1 = [
-    getPositionCoord(0), // bottom-right (4,0)
-    getPositionCoord(16), // (3,1)
-    getPositionCoord(20), // center
-    getPositionCoord(17), // (1,3)
-    getPositionCoord(8),  // top-left (0,4)
-  ].map((c) => coordToSVG(c.x, c.y));
-
-  const diagonal2 = [
-    getPositionCoord(4), // bottom-left (0,0)
-    getPositionCoord(18), // (1,1)
-    getPositionCoord(20), // center
-    getPositionCoord(19), // (3,3)
-    getPositionCoord(12), // top-right (4,4)
-  ].map((c) => coordToSVG(c.x, c.y));
+  // Diagonal B: corner 5 (top-right) → 24 → 25 → 26 → 27 → corner 15 (bottom-left)
+  const diagonal2 = [5, 24, 25, 26, 27, 15].map((pos) => {
+    const c = getPositionCoord(pos);
+    return coordToSVG(c.x, c.y);
+  });
 
   const outerPath = outerLinePoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.cx} ${p.cy}`).join(' ') + ' Z';
 
@@ -139,18 +133,11 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
                 fontWeight="bold"
                 style={{ fontFamily: 'serif' }}
               >
-                {pos === 0 ? '出' : pos === 4 ? '樂' : pos === 8 ? '福' : '寿'}
+                {pos === 0 ? '出' : pos === 5 ? '福' : pos === 10 ? '寿' : '樂'}
               </text>
             </g>
           );
         })}
-
-        {/* Center glow */}
-        {(() => {
-          const c = getPositionCoord(20);
-          const svg = coordToSVG(c.x, c.y);
-          return <circle cx={svg.cx} cy={svg.cy} r={50} fill="url(#centerGlow)" />;
-        })()}
 
         {/* Board lines - outer square */}
         <path d={outerPath} fill="none" stroke="#5C3A1A" strokeWidth={2.5} strokeLinejoin="round" />
@@ -175,14 +162,8 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
         {BOARD_POSITIONS.map((_, pos) => {
           const c = getPositionCoord(pos);
           const svg = coordToSVG(c.x, c.y);
-          const isHighlighted = highlightedPositions.some((h) => {
-            // Check if this position is in highlighted moves
-            const move = possibleMoves.find((m) => m.position === pos);
-            return move !== undefined && highlightedPositions.includes(pos);
-          });
           const isPossible = possibleMoves.some((m) => m.position === pos);
           const corner = isCorner(pos);
-          const center = isCenter(pos);
 
           return (
             <g key={`pos-${pos}`} transform={`translate(${svg.cx}, ${svg.cy})`}>
@@ -222,24 +203,12 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
 
               {/* Position dot - visual only, much larger now */}
               <circle
-                r={center ? 20 : corner ? 18 : isPossible ? 18 : 11}
-                fill={center ? '#C9184A' : corner ? '#5C3A1A' : '#5C3A1A'}
+                r={corner ? 18 : isPossible ? 18 : 11}
+                fill={corner ? '#5C3A1A' : '#5C3A1A'}
                 stroke="#3D2410"
                 strokeWidth={2}
                 style={{ pointerEvents: 'none' }}
               />
-              {center && (
-                <text
-                  textAnchor="middle"
-                  dy="7"
-                  fontSize={18}
-                  fill="#FFE4A8"
-                  fontWeight="bold"
-                  style={{ pointerEvents: 'none' }}
-                >
-                  中
-                </text>
-              )}
               {/* Position label for corners */}
               {corner && !isPossible && (
                 <text
@@ -250,7 +219,7 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
                   fontWeight="bold"
                   style={{ pointerEvents: 'none' }}
                 >
-                  {pos === 0 ? '出' : pos === 4 ? '福' : pos === 8 ? '寿' : '樂'}
+                  {pos === 0 ? '出' : pos === 5 ? '福' : pos === 10 ? '寿' : '樂'}
                 </text>
               )}
             </g>

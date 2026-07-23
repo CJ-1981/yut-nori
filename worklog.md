@@ -340,3 +340,41 @@ All 3 features verified via VLM:
 ✅ Camera rotates to high angle top-down view after landing
 ✅ All 4 sticks clearly visible from above
 ✅ OrbitControls enabled for user camera manipulation (rotate + zoom)
+
+---
+Task ID: 8
+Agent: Main (Super Z)
+Task: Change board from 5x5 to 6x6 grid so Mo (5 steps) exactly reaches the next corner.
+
+Work Log:
+- Redesigned board.ts for 6x6 grid (coordinates 0-5):
+  * Outer ring: 20 positions (0-19), 5 steps between corners
+  * Corners at positions 0 (bottom-right/start), 5 (top-right), 10 (top-left), 15 (bottom-left)
+  * Diagonal A: corner 0 → positions 20-23 → corner 10 (5 intervals)
+  * Diagonal B: corner 5 → positions 24-27 → corner 15 (5 intervals)
+  * Total: 28 positions (20 outer + 8 diagonal intermediates)
+  * No shared center point (6x6 grid has no center intersection)
+- Updated NEXT_MAP for counterclockwise outer ring (0→1→...→19→0)
+- Updated diagonal paths:
+  * d0: 0→20→21→22→23→10 (bottom-right to top-left)
+  * d5: 5→24→25→26→27→15 (top-right to bottom-left)
+  * d10: 10→23→22→21→20→0 (reverse of d0, ends at start = finish)
+  * d15: 15→27→26→25→24→5 (reverse of d5)
+- Updated PREV_MAP for Back-Do
+- Updated DIAGONAL_ENTRY for new corners (0→d0, 5→d5, 10→d10, 15→d15)
+- Updated step() function for new corner/diagonal transitions
+- Updated YutBoard SVG rendering:
+  * GRID_SIZE = (BOARD_SIZE - PADDING*2) / 5 (was /4)
+  * Outer ring renders 20 positions instead of 16
+  * Diagonal lines connect corner to corner through 4 intermediate points
+  * Corner labels updated: 出(0), 福(5), 寿(10), 樂(15)
+  * Removed center "中" text and centerGlow (no center in 6x6)
+  * Removed isCenter import and usage
+
+Stage Summary:
+- Board is now 6x6 with 6 dots per side and 5 intervals between corners
+- Mo (5 steps) exactly reaches the next corner from start
+- Do(1)=1 step, Gae(2)=2 steps, Geol(3)=3 steps, Yut(4)=4 steps, Mo(5)=5 steps (next corner)
+- Diagonal shortcuts available at all 4 corners
+- VLM verified: 6 dots per side, 5 intervals, correct corner labels, diagonals present
+- Piece movement verified: Do moves piece exactly 1 position from start
