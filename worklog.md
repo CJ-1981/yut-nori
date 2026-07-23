@@ -142,3 +142,47 @@ All 5 improvements successfully implemented and browser-verified:
 ✅ Mobile language selector moved to dedicated top bar (no longer hidden by title)
 - Lint passes cleanly
 - Dev server runs without errors
+
+---
+Task ID: 3
+Agent: Main (Super Z)
+Task: Fix 3D yut stick front/back distinction and animation background overlap/glitch issues.
+
+Work Log:
+- Completely redesigned 3D yut stick model for clear front/back distinction:
+  * Front (round side): LIGHT bamboo color (#E8C887) with end caps (#D4A856)
+  * Back (flat side): DARK brown (#2D1810) thin box
+  * Added RED marker line (#DC2626) on the flat/back side for extra visibility when back faces up
+  * Clear visual contrast: light beige vs dark brown
+- Fixed sticks appearing to "stand upright" issue:
+  * Root cause: cylinder default axis is Y (vertical), so rotation 0 = standing
+  * Solution: Added base Z rotation of PI/2 to lay sticks horizontally
+  * Front/back now distinguished by X-axis flip (0 = round up, PI = flat up)
+  * Sticks properly rest on ground at Y=0.13 (radius height)
+- Fixed animation background overlap/glitch:
+  * Reduced throw arc height (4 → 2.2) to keep sticks within camera view
+  * Reduced horizontal spread during throw to prevent going off-screen
+  * Reduced spin speed (8-14 → 6-10) for smoother motion
+  * Added fog effect for depth perception
+  * Increased shadow map resolution (1024 → 2048) and added shadow-bias for cleaner shadows
+  * Changed background from pure white (#FFFFFF) to soft off-white (#FAFAF7) to reduce harsh contrast
+  * Result overlay moved from bottom to top to avoid overlapping settled sticks
+  * Overlay container now uses max-w-3xl for better proportion
+- Enhanced lighting for stick visibility:
+  * Ambient light: 0.7 → 0.85
+  * Directional light: 1.2 → 1.3 with second fill light
+  * Added point light for highlights
+- Verified via VLM (Vision Language Model) analysis:
+  * Sticks clearly visible with distinct light/dark contrast
+  * Red markers visible on back sides
+  * Sticks properly lying flat on ground after landing
+  * No clipping, floating, or rendering glitches
+  * Background clean and minimal
+
+Stage Summary:
+Both issues resolved and visually verified:
+✅ 3D yut sticks have clear front/back distinction (light bamboo front, dark brown back, red marker)
+✅ Sticks lie flat on ground (not standing) with proper rotation
+✅ Animation stays within camera view without background overlap
+✅ No rendering glitches (clipping, floating, Z-fighting)
+✅ Clean white/off-white background for clear stick visibility

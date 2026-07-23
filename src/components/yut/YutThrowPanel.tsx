@@ -131,18 +131,24 @@ export function YutThrowPanel() {
 
   return (
     <div className="relative flex flex-col gap-3">
-      {/* 3D Animation overlay */}
+      {/* 3D Animation overlay - full screen with clear canvas container */}
       {isAnimating && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
-          <div className="relative w-full h-full max-w-2xl max-h-[80vh]">
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-stone-100">
+          {/* Canvas container with subtle border for clear boundaries */}
+          <div
+            className="relative w-full h-full max-w-3xl"
+            style={{
+              background: '#FAFAF7',
+            }}
+          >
             <YutThrow3D
               isThrown={isAnimating}
               throwResult={displayResult}
               onAnimationEnd={handleAnimationEnd}
             />
-            {/* Result overlay */}
+            {/* Result overlay - positioned at top to avoid overlapping sticks */}
             {showResult && displayResult && resultStyle && (
-              <div className="absolute inset-x-0 bottom-10 flex flex-col items-center gap-4 pointer-events-none">
+              <div className="absolute inset-x-0 top-6 flex flex-col items-center gap-4 pointer-events-none px-4">
                 <div
                   className={`px-8 py-4 rounded-2xl bg-gradient-to-br ${resultStyle.bg} border-2 shadow-2xl animate-[bounce_0.5s_ease-out]`}
                   style={{ borderColor: resultStyle.color }}
@@ -162,7 +168,7 @@ export function YutThrowPanel() {
                 {showContinue && (
                   <button
                     onClick={handleContinue}
-                    className="pointer-events-auto px-6 py-3 rounded-xl bg-stone-800 text-white font-bold shadow-lg hover:scale-105 active:scale-95 transition animate-[bounce_0.5s_ease-out]"
+                    className="pointer-events-auto px-8 py-3 rounded-xl bg-stone-800 text-white font-bold shadow-lg hover:scale-105 active:scale-95 transition animate-[bounce_0.5s_ease-out]"
                   >
                     {t('confirm')} →
                   </button>

@@ -1,13 +1,12 @@
 'use client';
 
 import { useRef, useMemo, useState, useEffect } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { useGameStore } from '@/lib/game/store';
 import { YutThrow } from '@/lib/game/types';
 import { soundManager } from '@/lib/sound/sounds';
 
-// Single yut stick
+// Single yut stick - designed with clear front/back distinction
 interface YutStickProps {
   index: number;
   throwResult: YutThrow | null;
@@ -17,18 +16,17 @@ interface YutStickProps {
 
 function YutStick({ index, throwResult, isThrown, onAnimationEnd }: YutStickProps) {
   const meshRef = useRef<THREE.Group>(null);
-  const { camera } = useThree();
   const [landed, setLanded] = useState(false);
 
-  // Initial random rotation and position per stick
+  // Initial random rotation and position per stick - wider spread
   const seed = useMemo(() => ({
     rotX: Math.random() * Math.PI * 2,
     rotY: Math.random() * Math.PI * 2,
     rotZ: Math.random() * Math.PI * 2,
-    offsetX: (Math.random() - 0.5) * 1.5,
-    offsetZ: (Math.random() - 0.5) * 1.5,
-    spinSpeed: 8 + Math.random() * 6,
-  }), []);
+    offsetX: (index - 1.5) * 0.3 + (Math.random() - 0.5) * 0.4,
+    offsetZ: (Math.random() - 0.5) * 0.6,
+    spinSpeed: 6 + Math.random() * 4,
+  }), [index]);
 
   // Animation timeline
   const startTime = useRef(0);
@@ -45,19 +43,22 @@ function YutStick({ index, throwResult, isThrown, onAnimationEnd }: YutStickProp
   useFrame(() => {
     if (!meshRef.current || !isThrown) return;
     const elapsed = (performance.now() - startTime.current) / 1000;
-    const throwDuration = 1.5; // seconds
-    const landDuration = 0.5;
+    const throwDuration = 1.3; // seconds
+    const landDuration = 0.4;
 
     if (elapsed < throwDuration) {
       // Throwing phase - sticks fly up and rotate
       const t = elapsed / throwDuration;
-      const arc = Math.sin(t * Math.PI) * 4; // arc height
+      const arc = Math.sin(t * Math.PI) * 2.2; // arc height
 
+      const startX = seed.offsetX;
+      const startZ = seed.offsetZ - 0.5;
       meshRef.current.position.set(
-        seed.offsetX * (1 + t),
-        -2 + arc,
-        seed.offsetZ * (1 + t) - 2,
+        startX,
+        0.4 + arc,
+        startZ,
       );
+      // During throwing, sticks tumble in all axes
       meshRef.current.rotation.set(
         seed.rotX + t * seed.spinSpeed,
         seed.rotY + t * seed.spinSpeed * 0.7,
@@ -65,7 +66,7 @@ function YutStick({ index, throwResult, isThrown, onAnimationEnd }: YutStickProp
       );
 
       // Play stickHit sounds at intervals
-      if (Math.floor(elapsed * 8) !== Math.floor((elapsed - 0.016) * 8) && elapsed > 0.3 && elapsed < 1.3) {
+      if (Math.floor(elapsed * 8) !== Math.floor((elapsed - 0.016) * 8) && elapsed > 0.3 && elapsed < 1.1) {
         if (Math.random() < 0.4) {
           soundManager.play('stickHit');
         }
@@ -76,17 +77,23 @@ function YutStick({ index, throwResult, isThrown, onAnimationEnd }: YutStickProp
       const easedT = 1 - Math.pow(1 - t, 3); // ease out
 
       // Determine target rotation based on result
+      // Sticks lie flat on ground (Z-axis rotation = PI/2 makes cylinder horizontal)
+      // - Front (round side UP) = rotation around its own axis = 0 (round half on top)
+      // - Back (flat side UP) = rotation around its own axis = PI (flat half on top)
       const isFront = throwResult ? throwResult.sticks[index] : false;
 
-      // Front (round up) = X rotation ~0, Back (flat down) = X rotation ~PI/2
-      const targetRotX = isFront ? 0 : Math.PI / 2;
+      // Base rotation: lay the stick horizontally (rotate Z by PI/2)
+      // Then rotate around X (the stick's length axis) to flip front/back
+      const baseRotZ = Math.PI / 2; // lay flat
+      const flipRotX = isFront ? 0 : Math.PI; // 0 = round up, PI = flat up
+      const targetRotX = flipRotX;
       const targetRotY = 0;
-      const targetRotZ = (index - 1.5) * 0.3; // slight spread
+      const targetRotZ = baseRotZ + (index - 1.5) * 0.1; // slight tilt variation
 
-      // Start from current rotation
-      const startRotX = seed.rotX + seed.spinSpeed;
-      const startRotY = seed.rotY + seed.spinSpeed * 0.7;
-      const startRotZ = seed.rotZ + seed.spinSpeed * 0.5;
+      // Start from current rotation (end of throwing)
+      const startRotX = seed.rotX + throwDuration * seed.spinSpeed;
+      const startRotY = seed.rotY + throwDuration * seed.spinSpeed * 0.7;
+      const startRotZ = seed.rotZ + throwDuration * seed.spinSpeed * 0.5;
 
       meshRef.current.rotation.set(
         startRotX + (targetRotX - startRotX) * easedT,
@@ -94,13 +101,16 @@ function YutStick({ index, throwResult, isThrown, onAnimationEnd }: YutStickProp
         startRotZ + (targetRotZ - startRotZ) * easedT,
       );
 
-      // Position settles
-      const finalX = (index - 1.5) * 0.6 + seed.offsetX * 0.3;
-      const finalZ = seed.offsetZ * 0.3;
+      // Position settles - arrange sticks in a row, lying on ground
+      const finalX = (index - 1.5) * 0.55;
+      const finalZ = 0;
+      const startX = seed.offsetX;
+      const startZ = seed.offsetZ - 0.5;
+      // Y = 0.13 (stick radius) so it rests on ground
       meshRef.current.position.set(
-        THREE.MathUtils.lerp(seed.offsetX * 2, finalX, easedT),
-        THREE.MathUtils.lerp(-2 + 0, 0, easedT),
-        THREE.MathUtils.lerp(seed.offsetZ * 2 - 2, finalZ, easedT),
+        THREE.MathUtils.lerp(startX, finalX, easedT),
+        THREE.MathUtils.lerp(0.4, 0.13, easedT),
+        THREE.MathUtils.lerp(startZ, finalZ, easedT),
       );
 
       // Landing sound at start of land phase
@@ -112,48 +122,80 @@ function YutStick({ index, throwResult, isThrown, onAnimationEnd }: YutStickProp
       // Final state - settle
       if (!hasEnded.current) {
         hasEnded.current = true;
-        // Wait a bit then signal end
         setTimeout(() => onAnimationEnd(), 600);
       }
-      // Keep sticks in final position
       const isFront = throwResult ? throwResult.sticks[index] : false;
-      const targetRotX = isFront ? 0 : Math.PI / 2;
-      meshRef.current.rotation.set(targetRotX, 0, (index - 1.5) * 0.3);
-      meshRef.current.position.set((index - 1.5) * 0.6 + seed.offsetX * 0.3, 0, seed.offsetZ * 0.3);
+      const baseRotZ = Math.PI / 2;
+      const flipRotX = isFront ? 0 : Math.PI;
+      meshRef.current.rotation.set(flipRotX, 0, baseRotZ + (index - 1.5) * 0.1);
+      meshRef.current.position.set((index - 1.5) * 0.55, 0.13, 0);
     }
   });
 
-  // Stick dimensions: long rounded cylinder
+  // Stick design: half-round cylinder lying horizontally
+  // The cylinder's axis is Y by default. The half-cylinder opens toward -Z.
+  // When laid flat (Z rot = PI/2), the length runs along X.
+  // - Round half (FRONT) = LIGHT bamboo color (#E8C887)
+  // - Flat half (BACK) = DARK brown (#2D1810)
+  // - Red line marker on the flat (dark) side
   return (
-    <group ref={meshRef} position={[0, -2, -2]}>
-      {/* The yut stick is a half-round cylinder (flat on one side, round on the other) */}
-      <group>
-        {/* Main stick body - half-round */}
-        <mesh castShadow receiveShadow>
-          <cylinderGeometry args={[0.12, 0.12, 2.2, 16, 1, false, 0, Math.PI]} />
-          <meshStandardMaterial color="#8B5A2B" roughness={0.7} metalness={0.05} />
-        </mesh>
-        {/* Flat side (back) */}
-        <mesh castShadow receiveShadow rotation={[0, 0, 0]}>
-          <boxGeometry args={[0.24, 2.2, 0.06]} />
-          <meshStandardMaterial color="#5C3A1A" roughness={0.85} />
-        </mesh>
-        {/* Front marking (decorative line) */}
-        <mesh position={[0, 0, 0.13]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.1, 0.015, 8, 16]} />
-          <meshStandardMaterial color="#3D2410" roughness={0.6} />
-        </mesh>
-      </group>
+    <group ref={meshRef} position={[0, 0.4, -0.5]}>
+      {/* Round front half (LIGHT) - half cylinder */}
+      <mesh castShadow receiveShadow>
+        <cylinderGeometry args={[0.13, 0.13, 2.0, 24, 1, false, 0, Math.PI]} />
+        <meshStandardMaterial
+          color="#E8C887"
+          roughness={0.5}
+          metalness={0.1}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      {/* Flat back half (DARK) - thin box filling the flat side */}
+      <mesh castShadow receiveShadow position={[0, 0, -0.065]}>
+        <boxGeometry args={[0.26, 2.0, 0.06]} />
+        <meshStandardMaterial
+          color="#2D1810"
+          roughness={0.85}
+          metalness={0.0}
+        />
+      </mesh>
+
+      {/* Red marker line on the FLAT (dark/back) side */}
+      <mesh position={[0, 0, -0.095]}>
+        <boxGeometry args={[0.04, 1.6, 0.01]} />
+        <meshStandardMaterial color="#DC2626" roughness={0.4} metalness={0.3} />
+      </mesh>
+
+      {/* End caps - front (LIGHT) */}
+      <mesh position={[0, 1.0, 0]}>
+        <cylinderGeometry args={[0.13, 0.13, 0.04, 24, 1, false, 0, Math.PI]} />
+        <meshStandardMaterial color="#D4A856" roughness={0.5} metalness={0.1} />
+      </mesh>
+      <mesh position={[0, -1.0, 0]}>
+        <cylinderGeometry args={[0.13, 0.13, 0.04, 24, 1, false, 0, Math.PI]} />
+        <meshStandardMaterial color="#D4A856" roughness={0.5} metalness={0.1} />
+      </mesh>
+
+      {/* End caps - back (DARK) */}
+      <mesh position={[0, 1.0, -0.065]}>
+        <boxGeometry args={[0.26, 0.04, 0.06]} />
+        <meshStandardMaterial color="#2D1810" roughness={0.85} />
+      </mesh>
+      <mesh position={[0, -1.0, -0.065]}>
+        <boxGeometry args={[0.26, 0.04, 0.06]} />
+        <meshStandardMaterial color="#2D1810" roughness={0.85} />
+      </mesh>
     </group>
   );
 }
 
-// Ground plane - white/light background for clear stick visibility
+// Ground plane - soft light background
 function Ground() {
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]} receiveShadow>
-      <planeGeometry args={[10, 10]} />
-      <meshStandardMaterial color="#FFFFFF" roughness={0.85} metalness={0.0} />
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+      <planeGeometry args={[8, 8]} />
+      <meshStandardMaterial color="#FAFAF7" roughness={0.9} metalness={0.0} />
     </mesh>
   );
 }
@@ -162,26 +204,21 @@ function Ground() {
 function Lighting() {
   return (
     <>
-      <ambientLight intensity={0.7} />
+      <ambientLight intensity={0.85} />
       <directionalLight
-        position={[5, 8, 5]}
-        intensity={1.2}
+        position={[3, 6, 4]}
+        intensity={1.3}
         castShadow
-        shadow-mapSize={[1024, 1024]}
+        shadow-mapSize={[2048, 2048]}
         shadow-camera-far={20}
-        shadow-camera-left={-5}
-        shadow-camera-right={5}
-        shadow-camera-top={5}
-        shadow-camera-bottom={-5}
+        shadow-camera-left={-4}
+        shadow-camera-right={4}
+        shadow-camera-top={4}
+        shadow-camera-bottom={-4}
+        shadow-bias={-0.0005}
       />
-      <pointLight position={[-3, 3, -3]} intensity={0.4} color="#FFE4B5" />
-      <spotLight
-        position={[0, 6, 0]}
-        angle={0.6}
-        penumbra={0.5}
-        intensity={0.5}
-        color="#FFFFFF"
-      />
+      <directionalLight position={[-3, 4, -2]} intensity={0.4} color="#FFFAF0" />
+      <pointLight position={[0, 3, 2]} intensity={0.3} color="#FFFFFF" />
     </>
   );
 }
@@ -196,11 +233,13 @@ export function YutThrow3D({ isThrown, throwResult, onAnimationEnd }: YutThrow3D
   return (
     <Canvas
       shadows
-      camera={{ position: [0, 3.5, 5], fov: 50 }}
-      style={{ width: '100%', height: '100%', background: '#FFFFFF' }}
+      camera={{ position: [0, 3.0, 4.5], fov: 45 }}
+      style={{ width: '100%', height: '100%', background: '#FAFAF7' }}
       gl={{ alpha: false, antialias: true }}
+      dpr={[1, 2]}
     >
-      <color attach="background" args={['#FFFFFF']} />
+      <color attach="background" args={['#FAFAF7']} />
+      <fog attach="fog" args={['#FAFAF7', 9, 18]} />
       <Lighting />
       <Ground />
       {[0, 1, 2, 3].map((i) => (
