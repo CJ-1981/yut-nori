@@ -449,3 +449,44 @@ Both features verified via VLM:
 ✅ Clear light/dark color distinction on sticks
 ✅ All 4 sticks clearly visible in scattered arrangement
 ✅ Game logic works correctly (piece movement verified)
+
+---
+Task ID: 11
+Agent: Main (Super Z)
+Task: Completely reimplement yut throwing animation with physics engine.
+
+Work Log:
+- Installed @react-three/rapier (Rapier physics engine for React Three Fiber)
+- Completely rewrote YutThrow3D with physics simulation:
+  * Physics world with gravity [0, -9.81, 0]
+  * 4 yut sticks as RigidBody dynamic objects with CuboidCollider
+  * Sticks drop from height (y=2.0) with random initial velocities
+  * Random angular velocities for natural tumbling rotation
+  * Realistic physics: restitution (0.3), friction (0.8), linear/angular damping
+  * Ground plane as fixed physics body
+  * 4 invisible walls (front, back, left, right) to contain sticks
+  * Sticks scatter in 2x2 grid pattern with random offsets
+  * Physics settling detection (low velocity for 0.5s = settled)
+  * Collision sound played when sticks hit ground
+- Stick design: two stacked boxes (light top, dark bottom)
+  * Light top: #E8C887 (front/round side)
+  * Dark bottom: #2D1810 (flat side)
+  * Dimensions: 0.3 × 0.16 × 1.6
+- Camera animation:
+  * Start: top-down view [0, 9, 2] with FOV 60
+  * After physics settle (2.5s): smooth rotate to angled view [0, 6, 4.5]
+  * User can control camera with OrbitControls after animation
+- Initialization handling:
+  * RigidBody ref checked with retry logic (up to 20 attempts)
+  * Physics velocity applied after body is ready
+  * Component keyed by isThrown to reset on new throw
+- Updated YutThrowPanel timing for physics (4s for throw+settle+camera)
+
+Stage Summary:
+Physics-based yut throwing verified via VLM:
+✅ All 4 yut sticks visible and scattered with physics
+✅ Realistic tumbling and landing
+✅ Sticks rest on ground with varied orientations
+✅ Clear light/dark color distinction
+✅ Game logic works correctly (Geol result, piece selection)
+✅ User can control camera after animation

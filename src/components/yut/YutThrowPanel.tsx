@@ -54,20 +54,19 @@ export function YutThrowPanel() {
     setShowContinue(false);
     setDisplayResult(null);
 
-    // Generate the result immediately but reveal after animation
+    // Generate the result immediately but reveal after physics simulation settles
     const result = throwYut();
     setDisplayResult(result);
 
-    // Play result sound after throw + land + camera rotation completes
-    // Timeline: throw(1.3s) + land(0.4s) + pause(0.3s) + camera rotate(1.2s) = 3.2s
+    // Play result sound after physics throw + settle + camera rotation
+    // Timeline: physics throw+settle(~2.5s) + camera rotate(1.0s) = 3.5s
     setTimeout(() => {
       soundManager.play(result.result.replace('-', '') as any);
       setShowResult(true);
-      // Show continue button after showing result
       setTimeout(() => {
         setShowContinue(true);
       }, 600);
-    }, 3300);
+    }, 4000);
   };
 
   const handleAnimationEnd = () => {
