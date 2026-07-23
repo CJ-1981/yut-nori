@@ -100,9 +100,9 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd }: Physi
     }
   });
 
-  // Stick: half-cylinder top (round/front) + flat box bottom
-  // The half-cylinder shape prevents sticks from standing on edge
-  // and looks like real yut sticks
+  // Stick: full cylinder lying horizontally
+  // Top half (light) and bottom half (dark) using two cylinders
+  // The cylindrical shape prevents sticks from standing on edge
   return (
     <RigidBody
       ref={rigidBodyRef}
@@ -113,48 +113,39 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd }: Physi
       linearDamping={0.2}
       angularDamping={0.5}
     >
-      {/* Collider: wider base for stability, prevents standing on edge */}
-      <CuboidCollider args={[0.15, 0.1, 0.8]} />
+      {/* Collider: cuboid for stability */}
+      <CuboidCollider args={[0.15, 0.15, 0.8]} />
 
-      {/* Light top half - half-cylinder (round/front side) */}
-      {/* Cylinder rotated so axis is along Z (length direction), half visible on top */}
-      <mesh castShadow receiveShadow rotation={[Math.PI / 2, 0, 0]} position={[0, 0.05, 0]}>
-        <cylinderGeometry args={[0.15, 0.15, 1.6, 16, 1, false, 0, Math.PI]} />
-        <meshStandardMaterial color="#E8C887" roughness={0.5} metalness={0.1} side={THREE.DoubleSide} />
-      </mesh>
-      {/* End caps for the half-cylinder (light) - to close the ends */}
-      <mesh castShadow position={[0, 0.05, 0.8]} rotation={[0, 0, 0]}>
-        <circleGeometry args={[0.15, 16, 0, Math.PI]} />
-        <meshStandardMaterial color="#D4A856" roughness={0.5} metalness={0.1} side={THREE.DoubleSide} />
-      </mesh>
-      <mesh castShadow position={[0, 0.05, -0.8]} rotation={[0, Math.PI, 0]}>
-        <circleGeometry args={[0.15, 16, 0, Math.PI]} />
-        <meshStandardMaterial color="#D4A856" roughness={0.5} metalness={0.1} side={THREE.DoubleSide} />
+      {/* Full cylinder - light colored (represents the round/front side) */}
+      {/* Cylinder axis is Y by default, rotate to lay along Z (length direction) */}
+      <mesh castShadow receiveShadow rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+        <cylinderGeometry args={[0.15, 0.15, 1.6, 24]} />
+        <meshStandardMaterial color="#E8C887" roughness={0.5} metalness={0.1} />
       </mesh>
 
-      {/* Dark bottom half - flat box (flat/back side) */}
-      <mesh castShadow receiveShadow position={[0, -0.05, 0]}>
-        <boxGeometry args={[0.3, 0.1, 1.6]} />
+      {/* Dark flat side - thin box on the bottom half */}
+      {/* This creates the visual distinction: round top (light) vs flat bottom (dark) */}
+      <mesh castShadow receiveShadow position={[0, -0.08, 0]}>
+        <boxGeometry args={[0.28, 0.06, 1.55]} />
         <meshStandardMaterial color="#2D1810" roughness={0.85} metalness={0.0} />
       </mesh>
 
       {/* Markings on top (round surface) - dark vertical stripes */}
-      {/* Slightly curved positioning to follow the half-cylinder surface */}
-      <mesh position={[-0.1, 0.14, 0]} castShadow>
+      <mesh position={[-0.08, 0.13, 0]} castShadow>
         <boxGeometry args={[0.02, 0.01, 1.3]} />
         <meshStandardMaterial color="#3D2410" roughness={0.7} />
       </mesh>
-      <mesh position={[0.1, 0.14, 0]} castShadow>
+      <mesh position={[0.08, 0.13, 0]} castShadow>
         <boxGeometry args={[0.02, 0.01, 1.3]} />
         <meshStandardMaterial color="#3D2410" roughness={0.7} />
       </mesh>
       {/* Cross markings near ends */}
-      <mesh position={[0, 0.15, 0.5]} castShadow>
-        <boxGeometry args={[0.22, 0.01, 0.03]} />
+      <mesh position={[0, 0.14, 0.5]} castShadow>
+        <boxGeometry args={[0.2, 0.01, 0.03]} />
         <meshStandardMaterial color="#3D2410" roughness={0.7} />
       </mesh>
-      <mesh position={[0, 0.15, -0.5]} castShadow>
-        <boxGeometry args={[0.22, 0.01, 0.03]} />
+      <mesh position={[0, 0.14, -0.5]} castShadow>
+        <boxGeometry args={[0.2, 0.01, 0.03]} />
         <meshStandardMaterial color="#3D2410" roughness={0.7} />
       </mesh>
     </RigidBody>

@@ -548,3 +548,33 @@ Verified via VLM:
 ✅ All 4 sticks visible
 ✅ Shape is realistic like real yut sticks
 ✅ Game logic works correctly (Do result, piece selection)
+
+---
+Task ID: 14
+Agent: Main (Super Z)
+Task: Fix half-cylinder rendering glitch (broken/transparent appearance).
+
+Work Log:
+- Replaced unstable half-cylinder geometry with full cylinder + dark box:
+  * Previous: half-cylinder (thetaLength=PI) + separate end caps → rendering glitches, transparency issues
+  * New: full cylinder (complete 360°) for the light/round side
+  * Added thin dark box on bottom for flat/back side visual distinction
+  * Full cylinder renders reliably without transparency or broken geometry
+- Cylinder specs:
+  * Radius: 0.15, Length: 1.6, 24 segments (smooth round surface)
+  * Rotated [PI/2, 0, 0] so axis runs along Z (length direction)
+  * Light color: #E8C887 (bamboo yellow)
+  * Dark flat box: 0.28 × 0.06 × 1.55 at y=-0.08
+  * Dark color: #2D1810
+- Kept markings on top (vertical stripes + cross lines)
+- Collider: CuboidCollider [0.15, 0.15, 0.8] matching cylinder dimensions
+- The cylindrical shape still prevents standing on edge (physically unstable on side)
+
+Stage Summary:
+Verified via VLM:
+✅ Sticks rendered properly (no broken/transparent geometry)
+✅ Rounded cylindrical top surface
+✅ Clear light/dark color distinction
+✅ All 4 sticks visible and lying flat
+✅ No rendering glitches
+✅ Game logic works correctly (Geol result, piece selection)
