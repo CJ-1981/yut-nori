@@ -99,7 +99,7 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd }: Physi
     }
   });
 
-  // Stick: two boxes (light top, dark bottom)
+  // Stick: two boxes (light top, dark bottom) with markings
   return (
     <RigidBody
       ref={rigidBodyRef}
@@ -121,6 +121,25 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd }: Physi
       <mesh castShadow receiveShadow position={[0, -0.08, 0]}>
         <boxGeometry args={[0.3, 0.16, 1.6]} />
         <meshStandardMaterial color="#2D1810" roughness={0.85} metalness={0.0} />
+      </mesh>
+
+      {/* Markings on top (light side) - dark vertical stripes like real yut sticks */}
+      <mesh position={[-0.08, 0.17, 0]} castShadow>
+        <boxGeometry args={[0.03, 0.01, 1.3]} />
+        <meshStandardMaterial color="#3D2410" roughness={0.7} />
+      </mesh>
+      <mesh position={[0.08, 0.17, 0]} castShadow>
+        <boxGeometry args={[0.03, 0.01, 1.3]} />
+        <meshStandardMaterial color="#3D2410" roughness={0.7} />
+      </mesh>
+      {/* Cross markings near ends */}
+      <mesh position={[0, 0.17, 0.5]} castShadow>
+        <boxGeometry args={[0.25, 0.01, 0.03]} />
+        <meshStandardMaterial color="#3D2410" roughness={0.7} />
+      </mesh>
+      <mesh position={[0, 0.17, -0.5]} castShadow>
+        <boxGeometry args={[0.25, 0.01, 0.03]} />
+        <meshStandardMaterial color="#3D2410" roughness={0.7} />
       </mesh>
     </RigidBody>
   );

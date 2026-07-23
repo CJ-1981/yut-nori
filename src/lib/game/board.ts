@@ -155,8 +155,10 @@ export function getPossibleMoves(
   const absSteps = Math.abs(steps);
 
   // Two paths to consider if at a corner with outer path going forward
+  // EXCEPTION: Start position (0) cannot take diagonal - must go outer
   const isAtCorner = CORNER_POSITIONS.includes(startPos);
-  const canTakeDiagonal = isAtCorner && startPath === 'outer' && !goingBackward;
+  const isStartCorner = startPos === 0;
+  const canTakeDiagonal = isAtCorner && !isStartCorner && startPath === 'outer' && !goingBackward;
 
   const paths: PathType[] = canTakeDiagonal
     ? [startPath, DIAGONAL_ENTRY[startPos]]

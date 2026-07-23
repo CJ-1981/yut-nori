@@ -490,3 +490,29 @@ Physics-based yut throwing verified via VLM:
 ✅ Clear light/dark color distinction
 ✅ Game logic works correctly (Geol result, piece selection)
 ✅ User can control camera after animation
+
+---
+Task ID: 12
+Agent: Main (Super Z)
+Task: (1) Prevent diagonal movement from start position, (2) Add markings to top face of yut sticks.
+
+Work Log:
+- Fixed start position diagonal movement:
+  * Added `isStartCorner` check in getPossibleMoves()
+  * Start position (position 0) cannot take diagonal shortcut
+  * `canTakeDiagonal = isAtCorner && !isStartCorner && startPath === 'outer' && !goingBackward`
+  * Other corners (5, 10, 15) still offer diagonal shortcuts
+  * Verified: Geol (3) from start shows only 1 highlighted position (outer ring only)
+- Added markings to yut stick top face:
+  * Two parallel dark vertical stripes on light top surface
+  * Two crosswise dark lines near each end
+  * Creates ladder/I-beam pattern like real yut sticks
+  * Marking color: #3D2410 (dark brown)
+  * Positioned at y=0.17 (just above top surface at y=0.16)
+
+Stage Summary:
+Both features verified via VLM:
+✅ Start position shows only 1 highlighted position (no diagonal option)
+✅ Other corners still offer diagonal shortcuts
+✅ Dark markings visible on top (light) surface of yut sticks
+✅ Two parallel lines + cross lines creating realistic yut pattern
