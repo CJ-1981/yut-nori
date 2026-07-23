@@ -161,12 +161,6 @@ function YutStick({ index, throwResult, isThrown, onAnimationEnd }: YutStickProp
         />
       </mesh>
 
-      {/* Red marker line on the FLAT (dark/back) side */}
-      <mesh position={[0, 0, -0.095]}>
-        <boxGeometry args={[0.04, 1.6, 0.01]} />
-        <meshStandardMaterial color="#DC2626" roughness={0.4} metalness={0.3} />
-      </mesh>
-
       {/* End caps - front (LIGHT) */}
       <mesh position={[0, 1.0, 0]}>
         <cylinderGeometry args={[0.13, 0.13, 0.04, 24, 1, false, 0, Math.PI]} />
@@ -200,25 +194,25 @@ function Ground() {
   );
 }
 
-// Lighting - bright and clear for stick visibility
+// Lighting - bright and clear for stick visibility from above
 function Lighting() {
   return (
     <>
-      <ambientLight intensity={0.85} />
+      <ambientLight intensity={0.9} />
       <directionalLight
-        position={[3, 6, 4]}
-        intensity={1.3}
+        position={[3, 8, 4]}
+        intensity={1.4}
         castShadow
         shadow-mapSize={[2048, 2048]}
-        shadow-camera-far={20}
-        shadow-camera-left={-4}
-        shadow-camera-right={4}
-        shadow-camera-top={4}
-        shadow-camera-bottom={-4}
+        shadow-camera-far={25}
+        shadow-camera-left={-5}
+        shadow-camera-right={5}
+        shadow-camera-top={5}
+        shadow-camera-bottom={-5}
         shadow-bias={-0.0005}
       />
-      <directionalLight position={[-3, 4, -2]} intensity={0.4} color="#FFFAF0" />
-      <pointLight position={[0, 3, 2]} intensity={0.3} color="#FFFFFF" />
+      <directionalLight position={[-3, 6, -2]} intensity={0.5} color="#FFFAF0" />
+      <pointLight position={[0, 5, 2]} intensity={0.4} color="#FFFFFF" />
     </>
   );
 }
@@ -233,13 +227,13 @@ export function YutThrow3D({ isThrown, throwResult, onAnimationEnd }: YutThrow3D
   return (
     <Canvas
       shadows
-      camera={{ position: [0, 3.0, 4.5], fov: 45 }}
+      camera={{ position: [0, 4.5, 3.5], fov: 50 }}
       style={{ width: '100%', height: '100%', background: '#FAFAF7' }}
       gl={{ alpha: false, antialias: true }}
       dpr={[1, 2]}
     >
       <color attach="background" args={['#FAFAF7']} />
-      <fog attach="fog" args={['#FAFAF7', 9, 18]} />
+      <fog attach="fog" args={['#FAFAF7', 10, 20]} />
       <Lighting />
       <Ground />
       {[0, 1, 2, 3].map((i) => (

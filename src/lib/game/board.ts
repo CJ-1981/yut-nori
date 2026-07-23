@@ -7,32 +7,32 @@ export interface BoardCoord {
 }
 
 // All 21 positions on the board
-// 0-15: outer ring (counterclockwise from bottom-right start)
+// 0-15: outer ring (COUNTERCLOCKWISE from bottom-right start)
 // 16-19: diagonal midpoints
 // 20: center
 export const BOARD_POSITIONS: BoardCoord[] = [
-  // Outer ring (counterclockwise)
+  // Outer ring (counterclockwise: bottom-right → up → left → down → right)
   { x: 4, y: 0 }, // 0: bottom-right (START)
-  { x: 3, y: 0 }, // 1
-  { x: 2, y: 0 }, // 2
-  { x: 1, y: 0 }, // 3
-  { x: 0, y: 0 }, // 4: bottom-left corner
-  { x: 0, y: 1 }, // 5
-  { x: 0, y: 2 }, // 6
-  { x: 0, y: 3 }, // 7
+  { x: 4, y: 1 }, // 1: going UP along right side
+  { x: 4, y: 2 }, // 2
+  { x: 4, y: 3 }, // 3
+  { x: 4, y: 4 }, // 4: top-right corner
+  { x: 3, y: 4 }, // 5: going LEFT along top
+  { x: 2, y: 4 }, // 6
+  { x: 1, y: 4 }, // 7
   { x: 0, y: 4 }, // 8: top-left corner
-  { x: 1, y: 4 }, // 9
-  { x: 2, y: 4 }, // 10
-  { x: 3, y: 4 }, // 11
-  { x: 4, y: 4 }, // 12: top-right corner
-  { x: 4, y: 3 }, // 13
-  { x: 4, y: 2 }, // 14
-  { x: 4, y: 1 }, // 15
+  { x: 0, y: 3 }, // 9: going DOWN along left side
+  { x: 0, y: 2 }, // 10
+  { x: 0, y: 1 }, // 11
+  { x: 0, y: 0 }, // 12: bottom-left corner
+  { x: 1, y: 0 }, // 13: going RIGHT along bottom
+  { x: 2, y: 0 }, // 14
+  { x: 3, y: 0 }, // 15
   // Diagonal midpoints
   { x: 3, y: 1 }, // 16: mid of diagonal 0→8 (closer to 0)
   { x: 1, y: 3 }, // 17: mid of diagonal 0→8 (closer to 8)
-  { x: 1, y: 1 }, // 18: mid of diagonal 4→12 (closer to 4)
-  { x: 3, y: 3 }, // 19: mid of diagonal 4→12 (closer to 12)
+  { x: 1, y: 1 }, // 18: mid of diagonal 12→4 (closer to 12)
+  { x: 3, y: 3 }, // 19: mid of diagonal 12→4 (closer to 4)
   // Center
   { x: 2, y: 2 }, // 20: center
 ];
@@ -42,13 +42,14 @@ export const CORNER_POSITIONS = [0, 4, 8, 12];
 
 // Path type tracking for each piece
 // 'outer' = on outer ring
-// 'd0' = on diagonal from corner 0 going up-left
-// 'd4' = on diagonal from corner 4 going up-right
-// 'd8' = on diagonal from corner 8 going down-right
-// 'd12' = on diagonal from corner 12 going down-left
+// 'd0' = on diagonal from corner 0 (bottom-right) to corner 8 (top-left)
+// 'd4' = on diagonal from corner 4 (top-right) to corner 12 (bottom-left)
+// 'd8' = on diagonal from corner 8 (top-left) to corner 0 (bottom-right)
+// 'd12' = on diagonal from corner 12 (bottom-left) to corner 4 (top-right)
 export type PathType = 'outer' | 'd0' | 'd4' | 'd8' | 'd12';
 
 // Next position lookup: `${pos}_${pathType}` → next position
+// Counterclockwise outer ring: 0→1→2→...→15→0
 const NEXT_MAP: Record<string, number> = {
   // Outer ring (counterclockwise)
   '0_outer': 1, '1_outer': 2, '2_outer': 3, '3_outer': 4,
@@ -56,31 +57,31 @@ const NEXT_MAP: Record<string, number> = {
   '8_outer': 9, '9_outer': 10, '10_outer': 11, '11_outer': 12,
   '12_outer': 13, '13_outer': 14, '14_outer': 15, '15_outer': 0,
 
-  // Diagonal 0 → 8 (up-left): 0 → 16 → 20 → 17 → 8
+  // Diagonal 0 → 8 (bottom-right to top-left): 0 → 16 → 20 → 17 → 8
   '0_d0': 16, '16_d0': 20, '20_d0': 17, '17_d0': 8,
 
-  // Diagonal 4 → 12 (up-right): 4 → 18 → 20 → 19 → 12
-  '4_d4': 18, '18_d4': 20, '20_d4': 19, '19_d4': 12,
+  // Diagonal 4 → 12 (top-right to bottom-left): 4 → 19 → 20 → 18 → 12
+  '4_d4': 19, '19_d4': 20, '20_d4': 18, '18_d4': 12,
 
-  // Diagonal 8 → 0 (down-right): 8 → 17 → 20 → 16 → 0
+  // Diagonal 8 → 0 (top-left to bottom-right): 8 → 17 → 20 → 16 → 0
   '8_d8': 17, '17_d8': 20, '20_d8': 16, '16_d8': 0,
 
-  // Diagonal 12 → 4 (down-left): 12 → 19 → 20 → 18 → 4
-  '12_d12': 19, '19_d12': 20, '20_d12': 18, '18_d12': 4,
+  // Diagonal 12 → 4 (bottom-left to top-right): 12 → 18 → 20 → 19 → 4
+  '12_d12': 18, '18_d12': 20, '20_d12': 19, '19_d12': 4,
 };
 
-// Backward move map (for Back-Do)
+// Backward move map (for Back-Do) - reverse of NEXT_MAP
 const PREV_MAP: Record<string, number> = {
-  // Outer ring (clockwise = backward)
+  // Outer ring (backward = clockwise)
   '0_outer': 15, '1_outer': 0, '2_outer': 1, '3_outer': 2,
   '4_outer': 3, '5_outer': 4, '6_outer': 5, '7_outer': 6,
   '8_outer': 7, '9_outer': 8, '10_outer': 9, '11_outer': 10,
   '12_outer': 11, '13_outer': 12, '14_outer': 13, '15_outer': 14,
-  // Backward on diagonals (rarely used but supported)
+  // Backward on diagonals
   '16_d0': 0, '20_d0': 16, '17_d0': 20,
-  '18_d4': 4, '20_d4': 18, '19_d4': 20,
+  '19_d4': 4, '20_d4': 19, '18_d4': 20,
   '17_d8': 8, '20_d8': 17, '16_d8': 20,
-  '19_d12': 12, '20_d12': 19, '18_d12': 20,
+  '18_d12': 12, '20_d12': 18, '19_d12': 20,
 };
 
 // Diagonal entries: from corner → diagonal path type

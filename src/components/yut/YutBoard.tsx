@@ -174,35 +174,47 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
 
           return (
             <g key={`pos-${pos}`} transform={`translate(${svg.cx}, ${svg.cy})`}>
-              {/* Highlight ring (rendered first so dot is on top) */}
+              {/* Large invisible touch target for highlighted positions (44px min touch target) */}
+              {isPossible && (
+                <circle
+                  r={28}
+                  fill="transparent"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => onPositionClick(pos)}
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    onPositionClick(pos);
+                  }}
+                />
+              )}
+              {/* Highlight ring (rendered for visual, no pointer events) */}
               {isPossible && (
                 <>
                   <circle
-                    r={24}
+                    r={26}
                     fill="#10B981"
-                    opacity={0.15}
+                    opacity={0.18}
                     style={{ pointerEvents: 'none' }}
                   />
                   <circle
-                    r={18}
+                    r={20}
                     fill="none"
                     stroke="#10B981"
-                    strokeWidth={3}
-                    opacity={0.9}
+                    strokeWidth={3.5}
+                    opacity={0.95}
                     className="animate-pulse"
                     style={{ pointerEvents: 'none' }}
                   />
                 </>
               )}
 
-              {/* Position dot - clickable when highlighted */}
+              {/* Position dot - visual only, click handled by touch target above */}
               <circle
-                r={center ? 14 : corner ? 12 : isPossible ? 12 : 7}
+                r={center ? 14 : corner ? 12 : isPossible ? 14 : 7}
                 fill={center ? '#C9184A' : corner ? '#5C3A1A' : '#5C3A1A'}
                 stroke="#3D2410"
                 strokeWidth={1.5}
-                style={{ cursor: isPossible ? 'pointer' : 'default' }}
-                onClick={() => isPossible && onPositionClick(pos)}
+                style={{ pointerEvents: 'none' }}
               />
               {center && (
                 <text
@@ -216,17 +228,17 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
                   中
                 </text>
               )}
-              {/* Position number for debugging (small, only for corners) */}
+              {/* Position label for corners */}
               {corner && !isPossible && (
                 <text
                   textAnchor="middle"
                   dy="3"
-                  fontSize="8"
+                  fontSize="9"
                   fill="#FFE4A8"
                   fontWeight="bold"
                   style={{ pointerEvents: 'none' }}
                 >
-                  {pos === 0 ? 'S' : pos === 4 ? 'BL' : pos === 8 ? 'TL' : 'TR'}
+                  {pos === 0 ? '出' : pos === 4 ? '福' : pos === 8 ? '寿' : '樂'}
                 </text>
               )}
             </g>
@@ -279,6 +291,8 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
             const offset = p.stackSize > 1 ? (p.stackIndex - (p.stackSize - 1) / 2) * 14 : 0;
             const isSelected = selectedPieceId === p.pieceId;
             const finalX = svg.cx + offset;
+            // Check if this position is a possible move target
+            const isPossibleTarget = possibleMoves.some((m) => m.position === p.position);
 
             return (
               <g
@@ -286,9 +300,14 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
                 style={{
                   transform: `translate(${finalX}px, ${svg.cy}px)`,
                   transition: 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                  cursor: p.playerId === currentPlayerIndex && !p.isCarried ? 'pointer' : 'default',
+                  // If this is a possible target, let clicks pass through to position handler
+                  // Otherwise, allow piece selection
+                  cursor: isPossibleTarget ? 'pointer' : (p.playerId === currentPlayerIndex && !p.isCarried ? 'pointer' : 'default'),
+                  pointerEvents: isPossibleTarget ? 'none' : 'auto',
                 }}
                 onClick={(e) => {
+                  // If position is a possible target, don't select piece - let position click handle it
+                  if (isPossibleTarget) return;
                   e.stopPropagation();
                   if (p.playerId === currentPlayerIndex && !p.isCarried) {
                     selectPiece(selectedPieceId === p.pieceId ? null : p.pieceId);
@@ -297,10 +316,10 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
               >
                 {/* Selected highlight */}
                 {isSelected && (
-                  <circle r={16} fill="none" stroke="#FCD34D" strokeWidth={3} className="animate-pulse" />
+                  <circle r={16} fill="none" stroke="#FCD34D" strokeWidth={3} className="animate-pulse" style={{ pointerEvents: 'none' }} />
                 )}
                 {/* Piece shadow */}
-                <ellipse cx={0} cy={3} rx={10} ry={3} fill="rgba(0,0,0,0.35)" />
+                <ellipse cx={0} cy={3} rx={10} ry={3} fill="rgba(0,0,0,0.35)" style={{ pointerEvents: 'none' }} />
                 {/* Piece body */}
                 <circle
                   r={11}
@@ -308,6 +327,7 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
                   stroke="#000"
                   strokeWidth={1.5}
                   opacity={p.isCarried ? 0.7 : 1}
+                  style={{ pointerEvents: 'none' }}
                 />
                 {/* Avatar emoji */}
                 <text

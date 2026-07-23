@@ -186,3 +186,53 @@ Both issues resolved and visually verified:
 ✅ Animation stays within camera view without background overlap
 ✅ No rendering glitches (clipping, floating, Z-fighting)
 ✅ Clean white/off-white background for clear stick visibility
+
+---
+Task ID: 4
+Agent: Main (Super Z)
+Task: Fix 6 gameplay issues: (1) enlarge touch area for highlighted positions, (2) fix piece starting logic (start at position 0, Do moves to position 1), (3) fix movement direction to counterclockwise, (4) raise 3D camera angle, (5) remove red line marker, (6) fix position selection when opponent piece is present.
+
+Work Log:
+- Fixed board movement direction from clockwise to counterclockwise:
+  * Reordered BOARD_POSITIONS array: outer ring now goes bottom-right → UP along right → LEFT along top → DOWN along left → RIGHT along bottom
+  * Updated corner positions: 0=bottom-right, 4=top-right, 8=top-left, 12=bottom-left
+  * Updated diagonal paths to match new corner positions:
+    - d0: corner 0 (bottom-right) → 16 → 20 → 17 → 8 (top-left)
+    - d4: corner 4 (top-right) → 19 → 20 → 18 → 12 (bottom-left)
+    - d8: corner 8 (top-left) → 17 → 20 → 16 → 0 (bottom-right)
+    - d12: corner 12 (bottom-left) → 18 → 20 → 19 → 4 (top-right)
+  * PREV_MAP updated for Back-Do
+- Fixed piece starting logic:
+  * When piece comes out of home, it appears at start (position 0) and moves FULL throw value forward
+  * Do(1) = position 1, Gae(2) = position 2, Geol(3) = position 3, Yut(4) = position 4, Mo(5) = position 5
+  * Removed special case for steps===1 that incorrectly placed piece at position 0
+- Enlarged touch area for highlighted positions:
+  * Added large invisible touch target circle (r=28) for highlighted positions
+  * Increased highlight ring radius from 18→20 and glow from 24→26
+  * Added onTouchStart handler for mobile responsiveness
+  * Position dots now have pointerEvents: 'none' (clicks handled by touch target)
+  * Minimum 44px touch target requirement met
+- Raised 3D camera angle:
+  * Changed camera position from [0, 3.0, 4.5] to [0, 4.5, 3.5] (higher, more top-down view)
+  * Changed FOV from 45 to 50 for wider view
+  * Increased lighting: ambient 0.85→0.9, directional 1.3→1.4, raised light positions
+  * Updated fog distance for better depth perception
+- Removed red line marker from yut sticks:
+  * Removed the red boxGeometry marker that was on the flat/dark side
+  * Front/back distinction now relies purely on color contrast (light bamboo vs dark brown)
+- Fixed position selection when opponent piece is present:
+  * When a position is a possible move target, pieces at that position have pointerEvents: 'none'
+  * This allows clicks to pass through to the position's touch target
+  * Pieces only capture clicks when their position is NOT a move target
+  * All piece child elements (shadow, body, text) have pointerEvents: 'none'
+
+Stage Summary:
+All 6 issues resolved and browser-verified:
+✅ Touch area enlarged (r=28 invisible target, 44px+ minimum)
+✅ Piece starting logic fixed (Do=position 1, not position 0)
+✅ Movement direction corrected to counterclockwise (up along right side first)
+✅ 3D camera angle raised (top-down view, sticks clearly visible)
+✅ Red line marker removed (clean color contrast only)
+✅ Position selection works even with opponent pieces present (pointer events pass-through)
+- Lint passes cleanly
+- VLM verified: camera angle high, no red markers, large touch targets

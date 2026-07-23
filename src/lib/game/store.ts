@@ -167,14 +167,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
     let moves: MoveOption[] = [];
     if (piece.position === -1) {
-      // Piece is at home - only allow bringing it out with non-back-do
+      // Piece is at home - bringing it out places it at START (position 0)
+      // Then it moves forward by the full throw value
+      // So: Do(1) = position 1, Gae(2) = position 2, etc.
       if (currentYut.steps > 0) {
-        // Place on start (position 0), then move remaining steps
-        if (currentYut.steps === 1) {
-          moves = [{ position: 0, pathType: 'outer', isDiagonalChoice: false, isFinish: false }];
-        } else {
-          moves = getPossibleMoves(0, 'outer', currentYut.steps - 1);
-        }
+        // Piece appears at start (0), then moves `steps` forward
+        moves = getPossibleMoves(0, 'outer', currentYut.steps);
       }
     } else if (piece.position === -2) {
       // Finished piece - can't move
