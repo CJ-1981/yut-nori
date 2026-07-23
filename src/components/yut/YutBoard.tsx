@@ -51,14 +51,14 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
     return coordToSVG(c.x, c.y);
   });
 
-  // Diagonal A: corner 0 → 21 → center(20) → 22 → corner 10
-  const diagonal1 = [0, 21, 20, 22, 10].map((pos) => {
+  // Diagonal A: corner 0 → 21 → 22 → center(20) → 23 → 24 → corner 10
+  const diagonal1 = [0, 21, 22, 20, 23, 24, 10].map((pos) => {
     const c = getPositionCoord(pos);
     return coordToSVG(c.x, c.y);
   });
 
-  // Diagonal B: corner 5 → 23 → center(20) → 24 → corner 15
-  const diagonal2 = [5, 23, 20, 24, 15].map((pos) => {
+  // Diagonal B: corner 5 → 25 → 26 → center(20) → 27 → 28 → corner 15
+  const diagonal2 = [5, 25, 26, 20, 27, 28, 15].map((pos) => {
     const c = getPositionCoord(pos);
     return coordToSVG(c.x, c.y);
   });
@@ -167,8 +167,7 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
           const center = isCenter(pos);
           const diagPoint = isDiagonalPoint(pos);
 
-          // Skip rendering diagonal intermediate points as dots (they're on lines)
-          if (diagPoint && !isPossible) return null;
+          // Render all positions as dots (including diagonal points)
 
           return (
             <g key={`pos-${pos}`} transform={`translate(${svg.cx}, ${svg.cy})`}>
@@ -233,7 +232,7 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
               {/* Position dot - visual only (skip for center, already rendered above) */}
               {!center && (
                 <circle
-                  r={corner ? 18 : isPossible ? 18 : 11}
+                  r={corner ? 18 : isPossible ? 18 : diagPoint ? 9 : 11}
                   fill={corner ? '#5C3A1A' : '#5C3A1A'}
                   stroke="#3D2410"
                   strokeWidth={2}

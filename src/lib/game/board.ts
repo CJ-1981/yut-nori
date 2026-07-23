@@ -1,17 +1,17 @@
 // Yut Nori board logic - 6x6 grid (coordinates 0-5)
-// 5 steps between outer corners so Mo (5) exactly reaches next corner
-// Diagonals pass through center (2.5, 2.5) - 5 intervals each
+// Outer ring: 5 steps between corners (Mo reaches next corner)
+// Diagonals: 6 steps between corners (7 points including center)
 
 export interface BoardCoord {
   x: number;
   y: number;
 }
 
-// All 25 positions on the board
+// All 29 positions on the board
 // 0-19: outer ring (counterclockwise from bottom-right start)
 // 20: center (shared by both diagonals)
-// 21-22: diagonal A intermediate points (corner 0 → center → corner 10)
-// 23-24: diagonal B intermediate points (corner 5 → center → corner 15)
+// 21-24: diagonal A points (corner 0 → center → corner 10), 2 on each side
+// 25-28: diagonal B points (corner 5 → center → corner 15), 2 on each side
 export const BOARD_POSITIONS: BoardCoord[] = [
   // Outer ring (counterclockwise: bottom-right → up → left → down → right)
   { x: 5, y: 0 }, // 0: bottom-right (START)
@@ -34,14 +34,18 @@ export const BOARD_POSITIONS: BoardCoord[] = [
   { x: 2, y: 0 }, // 17
   { x: 3, y: 0 }, // 18
   { x: 4, y: 0 }, // 19
-  // Center (shared by both diagonals)
+  // Center (shared by both diagonals) at (2.5, 2.5)
   { x: 2.5, y: 2.5 }, // 20: center
-  // Diagonal A intermediate points: corner 0(5,0) → 21 → center(20) → 22 → corner 10(0,5)
-  { x: 4.17, y: 0.83 }, // 21: between corner 0 and center
-  { x: 0.83, y: 4.17 }, // 22: between center and corner 10
-  // Diagonal B intermediate points: corner 5(5,5) → 23 → center(20) → 24 → corner 15(0,0)
-  { x: 4.17, y: 4.17 }, // 23: between corner 5 and center
-  { x: 0.83, y: 0.83 }, // 24: between center and corner 15
+  // Diagonal A: corner 0(5,0) → 21 → 22 → center(20) → 23 → 24 → corner 10(0,5)
+  { x: 4.17, y: 0.83 }, // 21
+  { x: 3.33, y: 1.67 }, // 22
+  { x: 1.67, y: 3.33 }, // 23
+  { x: 0.83, y: 4.17 }, // 24
+  // Diagonal B: corner 5(5,5) → 25 → 26 → center(20) → 27 → 28 → corner 15(0,0)
+  { x: 4.17, y: 4.17 }, // 25
+  { x: 3.33, y: 3.33 }, // 26
+  { x: 1.67, y: 1.67 }, // 27
+  { x: 0.83, y: 0.83 }, // 28
 ];
 
 // Corners where diagonal shortcuts can be taken
@@ -54,8 +58,8 @@ export const CENTER_POSITION = 20;
 export type PathType = 'outer' | 'd0' | 'd5' | 'd10' | 'd15';
 
 // Next position lookup: `${pos}_${pathType}` → next position
-// Counterclockwise outer ring: 0→1→2→...→19→0 (5 intervals per side)
-// Diagonals: each has 5 intervals (corner → intermediate → center → intermediate → opposite corner)
+// Outer ring: 5 intervals per side (counterclockwise)
+// Diagonals: 6 intervals each (7 points: corner → 2 points → center → 2 points → corner)
 const NEXT_MAP: Record<string, number> = {
   // Outer ring (counterclockwise)
   '0_outer': 1, '1_outer': 2, '2_outer': 3, '3_outer': 4, '4_outer': 5,
@@ -63,15 +67,15 @@ const NEXT_MAP: Record<string, number> = {
   '10_outer': 11, '11_outer': 12, '12_outer': 13, '13_outer': 14, '14_outer': 15,
   '15_outer': 16, '16_outer': 17, '17_outer': 18, '18_outer': 19, '19_outer': 0,
 
-  // Diagonal A: 0 → 21 → 20(center) → 22 → 10
-  '0_d0': 21, '21_d0': 20, '20_d0': 22, '22_d0': 10,
-  // Diagonal A reverse: 10 → 22 → 20(center) → 21 → 0
-  '10_d10': 22, '22_d10': 20, '20_d10': 21, '21_d10': 0,
+  // Diagonal A: 0 → 21 → 22 → 20(center) → 23 → 24 → 10
+  '0_d0': 21, '21_d0': 22, '22_d0': 20, '20_d0': 23, '23_d0': 24, '24_d0': 10,
+  // Diagonal A reverse: 10 → 24 → 23 → 20(center) → 22 → 21 → 0
+  '10_d10': 24, '24_d10': 23, '23_d10': 20, '20_d10': 22, '22_d10': 21, '21_d10': 0,
 
-  // Diagonal B: 5 → 23 → 20(center) → 24 → 15
-  '5_d5': 23, '23_d5': 20, '20_d5': 24, '24_d5': 15,
-  // Diagonal B reverse: 15 → 24 → 20(center) → 23 → 5
-  '15_d15': 24, '24_d15': 20, '20_d15': 23, '23_d15': 5,
+  // Diagonal B: 5 → 25 → 26 → 20(center) → 27 → 28 → 15
+  '5_d5': 25, '25_d5': 26, '26_d5': 20, '20_d5': 27, '27_d5': 28, '28_d5': 15,
+  // Diagonal B reverse: 15 → 28 → 27 → 20(center) → 26 → 25 → 5
+  '15_d15': 28, '28_d15': 27, '27_d15': 20, '20_d15': 26, '26_d15': 25, '25_d15': 5,
 };
 
 // Backward move map (for Back-Do) - reverse of NEXT_MAP
@@ -82,11 +86,11 @@ const PREV_MAP: Record<string, number> = {
   '10_outer': 9, '11_outer': 10, '12_outer': 11, '13_outer': 12, '14_outer': 13,
   '15_outer': 14, '16_outer': 15, '17_outer': 16, '18_outer': 17, '19_outer': 18,
   // Diagonal A backward
-  '21_d0': 0, '20_d0': 21, '22_d0': 20, '10_d0': 22,
-  '22_d10': 10, '20_d10': 22, '21_d10': 20, '0_d10': 21,
+  '21_d0': 0, '22_d0': 21, '20_d0': 22, '23_d0': 20, '24_d0': 23, '10_d0': 24,
+  '24_d10': 10, '23_d10': 24, '20_d10': 23, '22_d10': 20, '21_d10': 22, '0_d10': 21,
   // Diagonal B backward
-  '23_d5': 5, '20_d5': 23, '24_d5': 20, '15_d5': 24,
-  '24_d15': 15, '20_d15': 24, '23_d15': 20, '5_d15': 23,
+  '25_d5': 5, '26_d5': 25, '20_d5': 26, '27_d5': 20, '28_d5': 27, '15_d5': 28,
+  '28_d15': 15, '27_d15': 28, '20_d15': 27, '26_d15': 20, '25_d15': 26, '5_d15': 25,
 };
 
 // Diagonal entries: from corner → diagonal path type
@@ -206,7 +210,7 @@ export function isCenter(pos: number): boolean {
 
 // Check if a position is a diagonal intermediate point
 export function isDiagonalPoint(pos: number): boolean {
-  return pos >= 21 && pos <= 24;
+  return (pos >= 21 && pos <= 28);
 }
 
 // Roll the yut sticks and return the result

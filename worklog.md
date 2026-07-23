@@ -413,3 +413,39 @@ Both features verified via VLM:
 ✅ 6 dots per side confirmed on outer square
 ✅ 4 yut sticks scattered (not in line) after landing
 ✅ All 4 sticks clearly visible in scattered arrangement
+
+---
+Task ID: 10
+Agent: Main (Super Z)
+Task: (1) Make diagonals have 7 points (6 intervals) including center, (2) Fix 3D yut animation rendering glitches.
+
+Work Log:
+- Redesigned diagonals to have 7 points (6 intervals):
+  * Diagonal A: corner 0 → 21(4.17,0.83) → 22(3.33,1.67) → center(20) → 23(1.67,3.33) → 24(0.83,4.17) → corner 10
+  * Diagonal B: corner 5 → 25(4.17,4.17) → 26(3.33,3.33) → center(20) → 27(1.67,1.67) → 28(0.83,0.83) → corner 15
+  * Total positions: 29 (20 outer + 1 center + 8 diagonal intermediates)
+  * Updated NEXT_MAP with 6 intervals per diagonal
+  * Updated PREV_MAP for Back-Do
+- Updated YutBoard rendering:
+  * Diagonal lines connect all 7 points each
+  * Diagonal intermediate points (21-28) now rendered as smaller dots (r=9)
+  * All 7 points visible on each diagonal
+- Completely rewrote 3D yut animation for stable rendering:
+  * Replaced complex half-cylinder + box design with simple two-box design
+  * Top box: LIGHT color (#E8C887) - front/round side
+  * Bottom box: DARK color (#2D1810) - flat side
+  * Box dimensions: 0.3 x 0.16 x 1.6 (simple, stable geometry)
+  * Removed all complex geometry (torus, cylinder end caps, etc.)
+  * Simplified camera animation (removed fog, simplified phases)
+  * Reduced throw arc and spin speeds for smoother motion
+  * Maintained scattered 2x2 grid landing pattern
+  * Maintained OrbitControls for user camera manipulation
+
+Stage Summary:
+Both features verified via VLM:
+✅ 7 dots on each diagonal (2 corners + 4 intermediate + 1 center)
+✅ Center red circle with "中" character
+✅ 3D sticks render properly - no glitches, clipping, or broken geometry
+✅ Clear light/dark color distinction on sticks
+✅ All 4 sticks clearly visible in scattered arrangement
+✅ Game logic works correctly (piece movement verified)
