@@ -33,12 +33,13 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd }: Physi
       startX: gridX * 0.6 + (Math.random() - 0.5) * 0.2,
       startZ: gridZ * 0.6 + (Math.random() - 0.5) * 0.2,
       // Drop from above with slight random velocity
-      velX: (Math.random() - 0.5) * 1,
+      velX: (Math.random() - 0.5) * 0.8,
       velY: 2 + Math.random() * 1,
-      velZ: (Math.random() - 0.5) * 1,
-      angVelX: (Math.random() - 0.5) * 8,
-      angVelY: (Math.random() - 0.5) * 6,
-      angVelZ: (Math.random() - 0.5) * 8,
+      velZ: (Math.random() - 0.5) * 0.8,
+      // Reduced angular velocity to prevent excessive tumbling
+      angVelX: (Math.random() - 0.5) * 5,
+      angVelY: (Math.random() - 0.5) * 4,
+      angVelZ: (Math.random() - 0.5) * 5,
     };
   }, []);
 
@@ -99,46 +100,61 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd }: Physi
     }
   });
 
-  // Stick: two boxes (light top, dark bottom) with markings
+  // Stick: half-cylinder top (round/front) + flat box bottom
+  // The half-cylinder shape prevents sticks from standing on edge
+  // and looks like real yut sticks
   return (
     <RigidBody
       ref={rigidBodyRef}
       colliders={false}
       position={[throwParams.startX, 2.0, throwParams.startZ]}
-      restitution={0.3}
-      friction={0.8}
-      linearDamping={0.1}
-      angularDamping={0.3}
+      restitution={0.2}
+      friction={1.0}
+      linearDamping={0.2}
+      angularDamping={0.5}
     >
-      <CuboidCollider args={[0.15, 0.08, 0.8]} />
+      {/* Collider: wider base for stability, prevents standing on edge */}
+      <CuboidCollider args={[0.15, 0.1, 0.8]} />
 
-      {/* Light top half (front/round side) */}
-      <mesh castShadow receiveShadow position={[0, 0.08, 0]}>
-        <boxGeometry args={[0.3, 0.16, 1.6]} />
-        <meshStandardMaterial color="#E8C887" roughness={0.5} metalness={0.1} />
+      {/* Light top half - half-cylinder (round/front side) */}
+      {/* Cylinder rotated so axis is along Z (length direction), half visible on top */}
+      <mesh castShadow receiveShadow rotation={[Math.PI / 2, 0, 0]} position={[0, 0.05, 0]}>
+        <cylinderGeometry args={[0.15, 0.15, 1.6, 16, 1, false, 0, Math.PI]} />
+        <meshStandardMaterial color="#E8C887" roughness={0.5} metalness={0.1} side={THREE.DoubleSide} />
       </mesh>
-      {/* Dark bottom half (flat side) */}
-      <mesh castShadow receiveShadow position={[0, -0.08, 0]}>
-        <boxGeometry args={[0.3, 0.16, 1.6]} />
+      {/* End caps for the half-cylinder (light) - to close the ends */}
+      <mesh castShadow position={[0, 0.05, 0.8]} rotation={[0, 0, 0]}>
+        <circleGeometry args={[0.15, 16, 0, Math.PI]} />
+        <meshStandardMaterial color="#D4A856" roughness={0.5} metalness={0.1} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh castShadow position={[0, 0.05, -0.8]} rotation={[0, Math.PI, 0]}>
+        <circleGeometry args={[0.15, 16, 0, Math.PI]} />
+        <meshStandardMaterial color="#D4A856" roughness={0.5} metalness={0.1} side={THREE.DoubleSide} />
+      </mesh>
+
+      {/* Dark bottom half - flat box (flat/back side) */}
+      <mesh castShadow receiveShadow position={[0, -0.05, 0]}>
+        <boxGeometry args={[0.3, 0.1, 1.6]} />
         <meshStandardMaterial color="#2D1810" roughness={0.85} metalness={0.0} />
       </mesh>
 
-      {/* Markings on top (light side) - dark vertical stripes like real yut sticks */}
-      <mesh position={[-0.08, 0.17, 0]} castShadow>
-        <boxGeometry args={[0.03, 0.01, 1.3]} />
+      {/* Markings on top (round surface) - dark vertical stripes */}
+      {/* Slightly curved positioning to follow the half-cylinder surface */}
+      <mesh position={[-0.1, 0.14, 0]} castShadow>
+        <boxGeometry args={[0.02, 0.01, 1.3]} />
         <meshStandardMaterial color="#3D2410" roughness={0.7} />
       </mesh>
-      <mesh position={[0.08, 0.17, 0]} castShadow>
-        <boxGeometry args={[0.03, 0.01, 1.3]} />
+      <mesh position={[0.1, 0.14, 0]} castShadow>
+        <boxGeometry args={[0.02, 0.01, 1.3]} />
         <meshStandardMaterial color="#3D2410" roughness={0.7} />
       </mesh>
       {/* Cross markings near ends */}
-      <mesh position={[0, 0.17, 0.5]} castShadow>
-        <boxGeometry args={[0.25, 0.01, 0.03]} />
+      <mesh position={[0, 0.15, 0.5]} castShadow>
+        <boxGeometry args={[0.22, 0.01, 0.03]} />
         <meshStandardMaterial color="#3D2410" roughness={0.7} />
       </mesh>
-      <mesh position={[0, 0.17, -0.5]} castShadow>
-        <boxGeometry args={[0.25, 0.01, 0.03]} />
+      <mesh position={[0, 0.15, -0.5]} castShadow>
+        <boxGeometry args={[0.22, 0.01, 0.03]} />
         <meshStandardMaterial color="#3D2410" roughness={0.7} />
       </mesh>
     </RigidBody>

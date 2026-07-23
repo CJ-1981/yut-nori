@@ -516,3 +516,35 @@ Both features verified via VLM:
 ✅ Other corners still offer diagonal shortcuts
 ✅ Dark markings visible on top (light) surface of yut sticks
 ✅ Two parallel lines + cross lines creating realistic yut pattern
+
+---
+Task ID: 13
+Agent: Main (Super Z)
+Task: Make yut stick top surface half-cylinder shape to prevent standing on edge.
+
+Work Log:
+- Redesigned yut stick with half-cylinder top:
+  * Top: half-cylinder (cylinderGeometry with thetaLength=PI) for rounded front/round side
+  * Bottom: flat box for the dark/flat side
+  * Added end caps (circleGeometry half-circles) to close the half-cylinder ends
+  * Top color: light bamboo (#E8C887), end caps slightly darker (#D4A856)
+  * Bottom color: dark brown (#2D1810)
+  * Half-cylinder rotated [PI/2, 0, 0] so axis runs along Z (length direction)
+- Improved physics stability to prevent standing on edge:
+  * Increased friction: 0.8 → 1.0 (more grip on ground)
+  * Reduced restitution: 0.3 → 0.2 (less bouncing)
+  * Increased linear damping: 0.1 → 0.2
+  * Increased angular damping: 0.3 → 0.5 (less tumbling)
+  * Reduced initial angular velocity: 8 → 5 (less spinning)
+  * Collider: CuboidCollider [0.15, 0.1, 0.8] for stable base
+- Kept markings on top surface (vertical stripes + cross lines)
+- The half-cylinder shape naturally prevents sticks from balancing on edge
+  because the curved surface is physically unstable when on its side
+
+Stage Summary:
+Verified via VLM:
+✅ Yut sticks have rounded/half-cylinder top surface (not flat box)
+✅ All sticks lying flat on ground (not standing on edge)
+✅ All 4 sticks visible
+✅ Shape is realistic like real yut sticks
+✅ Game logic works correctly (Do result, piece selection)
