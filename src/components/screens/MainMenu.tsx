@@ -11,6 +11,8 @@ export function MainMenu() {
   const setPhase = useGameStore((s) => s.setPhase);
   const setBeginnerMode = useGameStore((s) => s.setBeginnerMode);
   const beginnerMode = useGameStore((s) => s.beginnerMode);
+  const backDoAdvantage = useGameStore((s) => s.backDoAdvantage);
+  const setBackDoAdvantage = useGameStore((s) => s.setBackDoAdvantage);
   const [showSettings, setShowSettings] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [musicEnabled, setMusicEnabled] = useState(false);
@@ -225,6 +227,31 @@ export function MainMenu() {
                 onChange={(e) => setVolume(parseInt(e.target.value) / 100)}
                 className="w-full accent-amber-500"
               />
+            </div>
+
+            {/* Back-Do Advantage toggle */}
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex-1 pr-3">
+                <div className="text-sm font-semibold text-stone-700">
+                  🔄 {t('backDoAdvantage')}
+                </div>
+                <div className="text-xs text-stone-500 mt-0.5">{t('backDoAdvantageDesc')}</div>
+              </div>
+              <button
+                onClick={() => {
+                  soundManager.play('click');
+                  setBackDoAdvantage(!backDoAdvantage);
+                }}
+                className={`relative w-14 h-7 rounded-full transition-colors flex-shrink-0 ${
+                  backDoAdvantage ? 'bg-green-500' : 'bg-stone-300'
+                }`}
+              >
+                <div
+                  className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                    backDoAdvantage ? 'translate-x-8' : 'translate-x-1'
+                  }`}
+                />
+              </button>
             </div>
 
             <button

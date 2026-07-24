@@ -36,6 +36,8 @@ export type TranslationKey =
   | 'beginnerMode'
   | 'beginnerModeDesc'
   | 'startMatch'
+  | 'backDoAdvantage'
+  | 'backDoAdvantageDesc'
   // Avatars
   | 'avatarTiger'
   | 'avatarDragon'
@@ -156,6 +158,8 @@ export const translations: Record<Language, TranslationDict> = {
     beginnerMode: 'Beginner Mode',
     beginnerModeDesc: 'Show hints and tutorials to learn the game',
     startMatch: 'Start Match',
+    backDoAdvantage: 'Back-Do Advantage',
+    backDoAdvantageDesc: 'Back-do with no pieces on board brings a piece to start',
     avatarTiger: 'Tiger',
     avatarDragon: 'Dragon',
     avatarPhoenix: 'Phoenix',
@@ -267,6 +271,8 @@ export const translations: Record<Language, TranslationDict> = {
     beginnerMode: '초보자 모드',
     beginnerModeDesc: '힌트와 튜토리얼을 보여줍니다',
     startMatch: '게임 시작',
+    backDoAdvantage: '빽도 어드벤티지',
+    backDoAdvantageDesc: '말이 없을 때 빽도가 나오면 시작점에 말 진입',
     avatarTiger: '호랑이',
     avatarDragon: '용',
     avatarPhoenix: '봉황',
@@ -378,6 +384,8 @@ export const translations: Record<Language, TranslationDict> = {
     beginnerMode: '初心者モード',
     beginnerModeDesc: 'ヒントとチュートリアルを表示',
     startMatch: 'マッチ開始',
+    backDoAdvantage: 'ペクド アドバンテージ',
+    backDoAdvantageDesc: 'コマがない時ペクドが出たら開始点にコム進入',
     avatarTiger: '虎',
     avatarDragon: '龍',
     avatarPhoenix: '鳳凰',
@@ -489,6 +497,8 @@ export const translations: Record<Language, TranslationDict> = {
     beginnerMode: '初学者模式',
     beginnerModeDesc: '显示提示和教程',
     startMatch: '开始对战',
+    backDoAdvantage: '白柶优势',
+    backDoAdvantageDesc: '没有棋子时白柶让棋子进入起点',
     avatarTiger: '虎',
     avatarDragon: '龙',
     avatarPhoenix: '凤',

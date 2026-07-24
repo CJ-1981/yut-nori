@@ -88,8 +88,26 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd }: Physi
     // Check if stick has settled
     if (speed < 0.15 && angSpeed < 0.15 && translation.y < 0.25) {
       settleTimerRef.current += 1;
-      if (settleTimerRef.current > 30) {
+      if (settleTimerRef.current > 20 && !hasSettled) {
         setHasSettled(true);
+        // Force correct orientation based on result
+        // sticks[index] = true means top face (light/round) should be UP
+        // sticks[index] = false means bottom face (dark/flat) should be UP
+        if (throwResult) {
+          const isTopUp = throwResult.sticks[index];
+          // Cylinder axis is along Z (after rotation). To flip top/bottom, rotate around Z by 0 or PI
+          // isTopUp=true: light side up (rotation z = 0)
+          // isTopUp=false: dark side up (rotation z = PI)
+          const targetRotZ = isTopUp ? 0 : Math.PI;
+          // Set rotation: keep Y rotation for natural look, set Z for face up
+          const currentRot = rb.rotation();
+          // Smoothly set rotation - disable physics control temporarily
+          rb.setEnabled(false);
+          rb.setRotation({ x: 0, y: currentRot.y, z: targetRotZ, w: Math.cos(targetRotZ / 2) }, true);
+          rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
+          rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+          rb.setEnabled(true);
+        }
         if (!endCalledRef.current) {
           endCalledRef.current = true;
           setTimeout(() => onAnimationEnd(), 500);
@@ -101,8 +119,11 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd }: Physi
   });
 
   // Stick: full cylinder lying horizontally
-  // Top half (light) and bottom half (dark) using two cylinders
-  // The cylindrical shape prevents sticks from standing on edge
+  // Top half (light/round) and bottom half (dark brown flat)
+  // For back-do: one stick has red bottom (backDoIndex)
+  const isBackDoStick = throwResult?.result === 'back-do' && throwResult.backDoIndex === index;
+  const bottomColor = isBackDoStick ? '#DC2626' : '#5C3A1A'; // red for back-do, brown for normal
+
   return (
     <RigidBody
       ref={rigidBodyRef}
@@ -116,18 +137,16 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd }: Physi
       {/* Collider: cuboid for stability */}
       <CuboidCollider args={[0.15, 0.15, 0.8]} />
 
-      {/* Full cylinder - light colored (represents the round/front side) */}
-      {/* Cylinder axis is Y by default, rotate to lay along Z (length direction) */}
+      {/* Full cylinder - light colored (represents the round/front/top side) */}
       <mesh castShadow receiveShadow rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <cylinderGeometry args={[0.15, 0.15, 1.6, 24]} />
         <meshStandardMaterial color="#E8C887" roughness={0.5} metalness={0.1} />
       </mesh>
 
-      {/* Dark flat side - thin box on the bottom half */}
-      {/* This creates the visual distinction: round top (light) vs flat bottom (dark) */}
+      {/* Flat bottom side - brown box (or red for back-do stick) */}
       <mesh castShadow receiveShadow position={[0, -0.08, 0]}>
         <boxGeometry args={[0.28, 0.06, 1.55]} />
-        <meshStandardMaterial color="#2D1810" roughness={0.85} metalness={0.0} />
+        <meshStandardMaterial color={bottomColor} roughness={0.85} metalness={0.0} />
       </mesh>
 
       {/* Markings on top (round surface) - dark vertical stripes */}
@@ -260,9 +279,12 @@ function CameraController({ isThrown, onAnimationDone }: { isThrown: boolean; on
 }
 
 // Interactive camera controls
-function InteractiveControls({ enabled }: { enabled: boolean }) {
+function InteractiveControls({ enabled, onUserInteraction }: { enabled: boolean; onUserInteraction?: (interacting: boolean) => void }) {
+  const controlsRef = useRef<any>(null);
+
   return (
     <OrbitControls
+      ref={controlsRef}
       enabled={enabled}
       enablePan={false}
       enableZoom={true}
@@ -273,6 +295,8 @@ function InteractiveControls({ enabled }: { enabled: boolean }) {
       maxPolarAngle={Math.PI / 2 - 0.1}
       target={[0, 0.15, 0]}
       makeDefault
+      onStart={() => onUserInteraction?.(true)}
+      onEnd={() => onUserInteraction?.(false)}
     />
   );
 }
@@ -281,9 +305,10 @@ interface YutThrow3DProps {
   isThrown: boolean;
   throwResult: YutThrow | null;
   onAnimationEnd: () => void;
+  onUserInteraction?: (interacting: boolean) => void;
 }
 
-export function YutThrow3D({ isThrown, throwResult, onAnimationEnd }: YutThrow3DProps) {
+export function YutThrow3D({ isThrown, throwResult, onAnimationEnd, onUserInteraction }: YutThrow3DProps) {
   return (
     <Canvas
       shadows
@@ -299,12 +324,13 @@ export function YutThrow3D({ isThrown, throwResult, onAnimationEnd }: YutThrow3D
         isThrown={isThrown}
         throwResult={throwResult}
         onAnimationEnd={onAnimationEnd}
+        onUserInteraction={onUserInteraction}
       />
     </Canvas>
   );
 }
 
-function SceneContent({ isThrown, throwResult, onAnimationEnd }: YutThrow3DProps) {
+function SceneContent({ isThrown, throwResult, onAnimationEnd, onUserInteraction }: YutThrow3DProps) {
   const [cameraAnimationDone, setCameraAnimationDone] = useState(false);
 
   return (
@@ -313,7 +339,7 @@ function SceneContent({ isThrown, throwResult, onAnimationEnd }: YutThrow3DProps
         isThrown={isThrown}
         onAnimationDone={() => setCameraAnimationDone(true)}
       />
-      <InteractiveControls enabled={cameraAnimationDone} />
+      <InteractiveControls enabled={cameraAnimationDone} onUserInteraction={onUserInteraction} />
       <Physics gravity={[0, -9.81, 0]} timeStep="vary">
         <PhysicsGround />
         <PhysicsWalls />

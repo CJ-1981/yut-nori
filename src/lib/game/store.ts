@@ -30,9 +30,13 @@ export interface GameStore {
   lastMoveMessage: string | null;
   winnerId: number | null;
 
+  // Settings
+  backDoAdvantage: boolean; // when true, back-do with no pieces on board brings a piece to start
+
   // Actions
   setPhase: (phase: GamePhase) => void;
   setBeginnerMode: (v: boolean) => void;
+  setBackDoAdvantage: (v: boolean) => void;
   setNumPlayers: (n: number) => void;
   setPlayer: (index: number, data: Partial<Player>) => void;
   startGame: () => void;
@@ -78,6 +82,7 @@ function defaultPlayers(): Player[] {
 const initialState = {
   phase: 'menu' as GamePhase,
   beginnerMode: false,
+  backDoAdvantage: false,
   numPlayers: 2,
   players: defaultPlayers(),
   currentPlayerIndex: 0,
@@ -101,6 +106,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setPhase: (phase) => set({ phase }),
 
   setBeginnerMode: (beginnerMode) => set({ beginnerMode }),
+
+  setBackDoAdvantage: (backDoAdvantage) => set({ backDoAdvantage }),
 
   setNumPlayers: (n) => {
     const players = createInitialPlayers(n);
@@ -155,7 +162,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   computePossibleMoves: () => {
-    const { currentYut, players, currentPlayerIndex, selectedPieceId } = get();
+    const { currentYut, players, currentPlayerIndex, selectedPieceId, backDoAdvantage } = get();
     if (!currentYut || !selectedPieceId) {
       set({ possibleMoves: [] });
       return;
@@ -168,12 +175,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
     let moves: MoveOption[] = [];
     if (piece.position === -1) {
-      // Piece is at home - bringing it out places it at START (position 0)
-      // Then it moves forward by the full throw value
-      // So: Do(1) = position 1, Gae(2) = position 2, etc.
+      // Piece is at home
       if (currentYut.steps > 0) {
-        // Piece appears at start (0), then moves `steps` forward
+        // Normal throw: bring piece to start (0), then move `steps` forward
         moves = getPossibleMoves(0, 'outer', currentYut.steps);
+      } else if (currentYut.steps < 0 && backDoAdvantage) {
+        // Back-do advantage: if no pieces on board, bring piece to start (position 0)
+        const hasBoardPieces = player.pieces.some((p) => p.position >= 0);
+        if (!hasBoardPieces) {
+          moves = [{ position: 0, pathType: 'outer', isDiagonalChoice: false, isFinish: false }];
+        }
       }
     } else if (piece.position === -2) {
       // Finished piece - can't move
@@ -187,16 +198,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   canMoveAnyPiece: () => {
-    const { currentYut, players, currentPlayerIndex } = get();
+    const { currentYut, players, currentPlayerIndex, backDoAdvantage } = get();
     if (!currentYut) return false;
     const player = players[currentPlayerIndex];
+    const hasBoardPieces = player.pieces.some((p) => p.position >= 0);
+    const hasHomePieces = player.pieces.some((p) => p.position === -1);
+
     for (const piece of player.pieces) {
       if (piece.position === -2) continue; // finished
       if (piece.position === -1) {
         // Home piece - can move only if not back-do
         if (currentYut.steps > 0) return true;
+        // Back-do advantage: if no pieces on board, back-do brings a piece to start
+        if (currentYut.steps < 0 && backDoAdvantage && !hasBoardPieces && hasHomePieces) {
+          return true;
+        }
       } else {
-        // On board - can always move (might result in invalid but at least try)
+        // On board - can always move
         return true;
       }
     }

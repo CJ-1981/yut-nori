@@ -36,6 +36,7 @@ export interface YutThrow {
   sticks: boolean[]; // true = round side up (front), false = flat side up (back)
   steps: number; // -1 for back-do, 1-5 for others
   extraTurn: boolean;
+  backDoIndex?: number; // index of the red-bottomed stick (for back-do)
 }
 
 export type PieceState = 'home' | 'board' | 'finished';

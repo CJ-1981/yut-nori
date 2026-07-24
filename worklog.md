@@ -578,3 +578,47 @@ Verified via VLM:
 ✅ All 4 sticks visible and lying flat
 ✅ No rendering glitches
 ✅ Game logic works correctly (Geol result, piece selection)
+
+---
+Task ID: 15
+Agent: Main (Super Z)
+Task: Multiple yut game improvements: brown bottom, camera interaction pause, red back-do bottom, back-do advantage rule+toggle, new yut result mapping.
+
+Work Log:
+- Changed yut stick bottom from black (#2D1810) to brown (#5C3A1A)
+- Added red bottom for back-do stick (#DC2626) using backDoIndex
+- New yut result mapping based on top face count:
+  * 4 top faces = Mo (5 steps, extra turn)
+  * 3 top faces = Do (1 step)
+  * 2 top faces = Gae (2 steps)
+  * 1 top face = Geol (3 steps)
+  * 0 top faces = Yut (4 steps, extra turn)
+- Added forced orientation after physics settle:
+  * Sticks forced to correct face-up based on throwResult.sticks[index]
+  * isTopUp=true: light side up (rotation z=0)
+  * isTopUp=false: dark side up (rotation z=PI)
+- Camera interaction pause:
+  * Added userInteracting state in YutThrowPanel
+  * OrbitControls onStart/onEnd callbacks update state
+  * Auto-continue disabled while userInteracting=true
+  * Auto-continue delay increased to 5s when not interacting
+- Back-do advantage rule:
+  * Added backDoAdvantage setting in store (default false)
+  * When enabled: back-do with no pieces on board brings a piece to start
+  * Updated canMoveAnyPiece() to check backDoAdvantage
+  * Updated computePossibleMoves() to offer start position for back-do advantage
+- Added back-do advantage toggle in Settings screen
+  * Added translations for all 4 languages
+  * Toggle with description in settings modal
+- Added backDoIndex to YutThrow type and rollYut result
+
+Stage Summary:
+All features implemented and verified:
+✅ Yut stick bottom is brown (not black)
+✅ Back-do stick has red bottom (visible)
+✅ New result mapping: 4top=Mo, 3top=Do, 2top=Gae, 1top=Geol, 0top=Yut
+✅ Forced orientation after settle (correct face up)
+✅ Camera interaction pauses auto-continue
+✅ Back-do advantage toggle in settings
+✅ Back-do advantage rule: no pieces + back-do = piece enters start
+✅ All 4 languages have translations

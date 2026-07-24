@@ -216,53 +216,74 @@ export function isDiagonalPoint(pos: number): boolean {
 }
 
 // Roll the yut sticks and return the result
+// New rule based on TOP face count (light/round side up):
+//   4 top faces = Mo (5 steps, extra turn)
+//   3 top faces = Do (1 step)
+//   2 top faces = Gae (2 steps)
+//   1 top face  = Geol (3 steps)
+//   0 top faces = Yut (4 steps, extra turn)
+// Back-Do is a special case: one stick has red bottom, lands bottom-up
 export function rollYut(): YutThrowResult {
   const r = Math.random();
+
+  // Back-Do probability (~7%)
   if (r < 0.07) {
+    // Pick which stick is the red-bottomed one (will be bottom-up)
+    const backDoIndex = Math.floor(Math.random() * 4);
+    const sticks = [false, false, false, false]; // all bottom-up (back-do special)
+    sticks[backDoIndex] = false; // red-bottom stick is bottom-up
     return {
       result: 'back-do',
-      sticks: [true, false, false, false],
+      sticks,
       steps: -1,
       extraTurn: false,
+      backDoIndex,
     };
-  } else if (r < 0.32) {
-    return {
-      result: 'do',
-      sticks: [true, false, false, false].sort(() => Math.random() - 0.5),
-      steps: 1,
-      extraTurn: false,
-    };
-  } else if (r < 0.69) {
-    return {
-      result: 'gae',
-      sticks: [true, true, false, false].sort(() => Math.random() - 0.5),
-      steps: 2,
-      extraTurn: false,
-    };
-  } else if (r < 0.94) {
-    return {
-      result: 'geol',
-      sticks: [true, true, true, false].sort(() => Math.random() - 0.5),
-      steps: 3,
-      extraTurn: false,
-    };
-  } else {
-    if (r < 0.97) {
-      return {
-        result: 'yut',
-        sticks: [true, true, true, true],
-        steps: 4,
-        extraTurn: true,
-      };
-    } else {
-      return {
-        result: 'mo',
-        sticks: [false, false, false, false],
-        steps: 5,
-        extraTurn: true,
-      };
-    }
   }
+
+  // Determine number of top faces (light side up) - 0 to 4
+  // Probability distribution adjusted for gameplay
+  const r2 = Math.random();
+  let topCount: number;
+  if (r2 < 0.06) topCount = 4;       // Mo (6%)
+  else if (r2 < 0.25) topCount = 0;  // Yut (19%)
+  else if (r2 < 0.50) topCount = 1;  // Geol (25%)
+  else if (r2 < 0.81) topCount = 2;  // Gae (31%)
+  else topCount = 3;                  // Do (19%)
+
+  // Map top count to result
+  let result: YutResultType;
+  let steps: number;
+  let extraTurn = false;
+  switch (topCount) {
+    case 4:
+      result = 'mo'; steps = 5; extraTurn = true; break;
+    case 3:
+      result = 'do'; steps = 1; break;
+    case 2:
+      result = 'gae'; steps = 2; break;
+    case 1:
+      result = 'geol'; steps = 3; break;
+    case 0:
+    default:
+      result = 'yut'; steps = 4; extraTurn = true; break;
+  }
+
+  // Generate sticks array: true = top face (light up), false = bottom face (dark up)
+  const sticks = Array.from({ length: 4 }, (_, i) => i < topCount);
+  // Shuffle so top faces are random positions
+  for (let i = sticks.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [sticks[i], sticks[j]] = [sticks[j], sticks[i]];
+  }
+
+  return {
+    result,
+    sticks,
+    steps,
+    extraTurn,
+    backDoIndex: undefined,
+  };
 }
 
 type YutResultType = 'do' | 'gae' | 'geol' | 'yut' | 'mo' | 'back-do';
@@ -271,4 +292,5 @@ type YutThrowResult = {
   sticks: boolean[];
   steps: number;
   extraTurn: boolean;
+  backDoIndex?: number; // index of the red-bottomed stick (for back-do)
 };

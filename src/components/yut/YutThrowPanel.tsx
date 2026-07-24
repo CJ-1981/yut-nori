@@ -42,6 +42,7 @@ export function YutThrowPanel() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
+  const [userInteracting, setUserInteracting] = useState(false); // user controlling camera
 
   const player = players[currentPlayerIndex];
   const playerColor = PLAYER_COLORS_LOCAL[currentPlayerIndex];
@@ -87,15 +88,16 @@ export function YutThrowPanel() {
   };
 
   // Auto-continue after a delay if user doesn't click
+  // But NOT if user is interacting with the camera
   useEffect(() => {
     if (showContinue && !showResult) return;
-    if (showContinue) {
+    if (showContinue && !userInteracting) {
       const timer = setTimeout(() => {
         handleContinue();
-      }, 3500);
+      }, 5000); // longer delay to allow camera exploration
       return () => clearTimeout(timer);
     }
-  }, [showContinue]);
+  }, [showContinue, userInteracting]);
 
   // Pointer drag handling for "throw feel"
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -145,6 +147,7 @@ export function YutThrowPanel() {
               isThrown={isAnimating}
               throwResult={displayResult}
               onAnimationEnd={handleAnimationEnd}
+              onUserInteraction={setUserInteracting}
             />
             {/* Result overlay - positioned at top to avoid overlapping sticks */}
             {showResult && displayResult && resultStyle && (
