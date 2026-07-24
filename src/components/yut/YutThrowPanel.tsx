@@ -25,6 +25,7 @@ export function YutThrowPanel() {
   const { t } = useI18n();
   const throwYut = useGameStore((s) => s.throwYut);
   const currentYut = useGameStore((s) => s.currentYut);
+  const setYutResult = useGameStore((s) => s.setYutResult);
   const turnPhase = useGameStore((s) => s.turnPhase);
   const currentPlayerIndex = useGameStore((s) => s.currentPlayerIndex);
   const players = useGameStore((s) => s.players);
@@ -84,6 +85,58 @@ export function YutThrowPanel() {
     if (displayResult) {
       // Use setTimeout to ensure state is updated
       setTimeout(() => computePossibleMoves(), 50);
+    }
+  };
+
+  // Handle actual measured result from physics simulation
+  // Recalculate the yut result based on actual stick orientations
+  const handleActualResult = (actualSticks: boolean[]) => {
+    if (!displayResult) return;
+
+    // Count top faces (light side up = true)
+    const topCount = actualSticks.filter((s) => s).length;
+
+    // Check for back-do: 3 top faces + 1 bottom (red) face
+    // The backDoIndex from original result indicates which stick has red bottom
+    const originalBackDoIndex = displayResult.backDoIndex;
+    let isBackDo = false;
+    if (topCount === 3 && originalBackDoIndex !== undefined) {
+      // The one bottom-up stick should be the red-bottomed one
+      const bottomUpIndex = actualSticks.indexOf(false);
+      if (bottomUpIndex === originalBackDoIndex) {
+        isBackDo = true;
+      }
+    }
+
+    // Determine result based on actual top count
+    let result: YutThrow['result'];
+    let steps: number;
+    let extraTurn = false;
+
+    if (isBackDo) {
+      result = 'back-do';
+      steps = -1;
+    } else {
+      switch (topCount) {
+        case 4: result = 'mo'; steps = 5; extraTurn = true; break;
+        case 3: result = 'do'; steps = 1; break;
+        case 2: result = 'gae'; steps = 2; break;
+        case 1: result = 'geol'; steps = 3; break;
+        case 0: default: result = 'yut'; steps = 4; extraTurn = true; break;
+      }
+    }
+
+    // Only update if result changed from original
+    if (result !== displayResult.result) {
+      const updatedResult: YutThrow = {
+        result,
+        sticks: actualSticks,
+        steps,
+        extraTurn,
+        backDoIndex: isBackDo ? originalBackDoIndex : undefined,
+      };
+      setDisplayResult(updatedResult);
+      setYutResult(updatedResult);
     }
   };
 
@@ -148,6 +201,7 @@ export function YutThrowPanel() {
               throwResult={displayResult}
               onAnimationEnd={handleAnimationEnd}
               onUserInteraction={setUserInteracting}
+              onActualResult={handleActualResult}
             />
             {/* Result overlay - positioned at top to avoid overlapping sticks */}
             {showResult && displayResult && resultStyle && (

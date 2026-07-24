@@ -648,3 +648,36 @@ Both features implemented and verified:
 ✅ Back-do only when 3 top faces + 1 red bottom face up
 ✅ Hint text changes correctly after auto-select
 ✅ Game logic works correctly
+
+---
+Task ID: 17
+Agent: Main (Super Z)
+Task: Judge yut result based on actual stick angle (which face is more horizontal/up).
+
+Work Log:
+- Removed forced orientation after physics settle
+  * Previously: forced sticks to match pre-determined result
+  * Now: let physics simulation determine actual orientation
+- Added actual angle measurement in PhysicsYutStick:
+  * After settle, measure world-space Y component of local up vector
+  * Use quaternion from rigid body rotation
+  * If worldUp.y > 0: light (top) side is up (isTopUp = true)
+  * If worldUp.y < 0: dark (bottom) side is up (isTopUp = false)
+  * The side with greater horizontal angle wins (closer to vertical = facing up)
+- Added onStickSettled callback to report each stick's actual orientation
+- Added SceneContent logic to collect all 4 sticks' results:
+  * settledResultsRef tracks each stick's measured orientation
+  * When all 4 settled, reports actual results via onActualResult
+  * Reset on new throw
+- Added handleActualResult in YutThrowPanel:
+  * Recalculates result based on actual measured sticks array
+  * Counts top faces to determine: Mo(4)/Do(3)/Gae(2)/Geol(1)/Yut(0)
+  * Checks back-do: 3 top + 1 red bottom (backDoIndex)
+  * Only updates if result changed from original prediction
+  * Updates both displayResult and game store's currentYut
+
+Stage Summary:
+- Yut result now judged by actual physics orientation, not forced
+- The face that's more horizontal/up (greater angle) determines the result
+- Game logic updates if actual result differs from prediction
+- Game works correctly (Geol result verified)

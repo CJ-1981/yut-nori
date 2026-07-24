@@ -14,15 +14,17 @@ interface PhysicsYutStickProps {
   throwResult: YutThrow | null;
   isThrown: boolean;
   onAnimationEnd: () => void;
+  onStickSettled?: (index: number, isTopUp: boolean) => void;
 }
 
-function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd }: PhysicsYutStickProps) {
+function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStickSettled }: PhysicsYutStickProps) {
   const rigidBodyRef = useRef<any>(null);
   const [hasSettled, setHasSettled] = useState(false);
   const [collisionSoundPlayed, setCollisionSoundPlayed] = useState(false);
   const settleTimerRef = useRef(0);
   const endCalledRef = useRef(false);
   const initializedRef = useRef(false);
+  const settledReportedRef = useRef(false);
 
   // Random initial throw parameters per stick - spread out starting positions
   const throwParams = useMemo(() => {
@@ -90,24 +92,28 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd }: Physi
       settleTimerRef.current += 1;
       if (settleTimerRef.current > 20 && !hasSettled) {
         setHasSettled(true);
-        // Force correct orientation based on result
-        // sticks[index] = true means top face (light/round) should be UP
-        // sticks[index] = false means bottom face (dark/flat) should be UP
-        if (throwResult) {
-          const isTopUp = throwResult.sticks[index];
-          // Cylinder axis is along Z (after rotation). To flip top/bottom, rotate around Z by 0 or PI
-          // isTopUp=true: light side up (rotation z = 0)
-          // isTopUp=false: dark side up (rotation z = PI)
-          const targetRotZ = isTopUp ? 0 : Math.PI;
-          // Set rotation: keep Y rotation for natural look, set Z for face up
-          const currentRot = rb.rotation();
-          // Smoothly set rotation - disable physics control temporarily
-          rb.setEnabled(false);
-          rb.setRotation({ x: 0, y: currentRot.y, z: targetRotZ, w: Math.cos(targetRotZ / 2) }, true);
-          rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
-          rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
-          rb.setEnabled(true);
+
+        // Measure actual orientation to determine top/bottom face
+        // The cylinder's local "up" direction (Y axis in local space) indicates which face is up
+        // After physics, we check the world-space Y component of the local up vector
+        const rot = rb.rotation();
+        // Create a quaternion from the rotation
+        const quat = new THREE.Quaternion(rot.x, rot.y, rot.z, rot.w);
+        // Local up vector (Y axis) transformed to world space
+        const localUp = new THREE.Vector3(0, 1, 0);
+        const worldUp = localUp.clone().applyQuaternion(quat);
+        // If worldUp.y > 0, the light (top) side is facing up
+        // If worldUp.y < 0, the dark (bottom) side is facing up
+        // Use threshold: if |worldUp.y| > 0.1, it's settled on a face
+        // The side with greater horizontal angle wins (closer to vertical)
+        const isTopUp = worldUp.y > 0;
+
+        // Report the actual measured result
+        if (!settledReportedRef.current) {
+          settledReportedRef.current = true;
+          onStickSettled?.(index, isTopUp);
         }
+
         if (!endCalledRef.current) {
           endCalledRef.current = true;
           setTimeout(() => onAnimationEnd(), 500);
@@ -306,9 +312,10 @@ interface YutThrow3DProps {
   throwResult: YutThrow | null;
   onAnimationEnd: () => void;
   onUserInteraction?: (interacting: boolean) => void;
+  onActualResult?: (sticks: boolean[]) => void;
 }
 
-export function YutThrow3D({ isThrown, throwResult, onAnimationEnd, onUserInteraction }: YutThrow3DProps) {
+export function YutThrow3D({ isThrown, throwResult, onAnimationEnd, onUserInteraction, onActualResult }: YutThrow3DProps) {
   return (
     <Canvas
       shadows
@@ -325,13 +332,35 @@ export function YutThrow3D({ isThrown, throwResult, onAnimationEnd, onUserIntera
         throwResult={throwResult}
         onAnimationEnd={onAnimationEnd}
         onUserInteraction={onUserInteraction}
+        onActualResult={onActualResult}
       />
     </Canvas>
   );
 }
 
-function SceneContent({ isThrown, throwResult, onAnimationEnd, onUserInteraction }: YutThrow3DProps) {
+function SceneContent({ isThrown, throwResult, onAnimationEnd, onUserInteraction, onActualResult }: YutThrow3DProps) {
   const [cameraAnimationDone, setCameraAnimationDone] = useState(false);
+  const settledResultsRef = useRef<boolean[]>([false, false, false, false]);
+  const reportedRef = useRef(false);
+
+  const handleStickSettled = (index: number, isTopUp: boolean) => {
+    settledResultsRef.current[index] = isTopUp;
+    // Check if all 4 sticks have settled
+    const allSettled = settledResultsRef.current.every((v) => v !== undefined);
+    if (allSettled && !reportedRef.current) {
+      reportedRef.current = true;
+      // Report actual measured results
+      onActualResult?.([...settledResultsRef.current]);
+    }
+  };
+
+  // Reset on new throw
+  useEffect(() => {
+    if (isThrown) {
+      settledResultsRef.current = [false, false, false, false];
+      reportedRef.current = false;
+    }
+  }, [isThrown]);
 
   return (
     <>
@@ -350,6 +379,7 @@ function SceneContent({ isThrown, throwResult, onAnimationEnd, onUserInteraction
             throwResult={throwResult}
             isThrown={isThrown}
             onAnimationEnd={onAnimationEnd}
+            onStickSettled={handleStickSettled}
           />
         ))}
       </Physics>
