@@ -622,3 +622,29 @@ All features implemented and verified:
 ✅ Back-do advantage toggle in settings
 ✅ Back-do advantage rule: no pieces + back-do = piece enters start
 ✅ All 4 languages have translations
+
+---
+Task ID: 16
+Agent: Main (Super Z)
+Task: (1) Auto-select home piece when start position is touched, (2) Back-do only when 3 top faces + 1 red bottom.
+
+Work Log:
+- Added start position touch auto-select:
+  * Start position (pos 0) always has invisible touch target (r=30)
+  * When clicked with no piece selected and home pieces exist, auto-selects first home piece
+  * Only works when currentYut.steps > 0 (not back-do)
+  * Verified: hint changes from "Select a Piece" to "Tap a highlighted spot"
+- Fixed back-do judgment logic:
+  * Back-do now only occurs when topCount === 3 (3 top faces, 1 bottom face)
+  * The one bottom-up stick has red bottom = back-do
+  * ~25% chance of back-do when 3 top faces rolled
+  * Removed separate back-do probability roll
+  * backDoIndex = index of the bottom-up (red bottom) stick
+  * sticks array: [true, true, true, false] pattern for back-do
+
+Stage Summary:
+Both features implemented and verified:
+✅ Start position touch auto-selects home piece (verified via JS click test)
+✅ Back-do only when 3 top faces + 1 red bottom face up
+✅ Hint text changes correctly after auto-select
+✅ Game logic works correctly

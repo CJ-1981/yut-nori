@@ -111,6 +111,17 @@ export function GameScreen() {
     if (move && selectedPieceId) {
       soundManager.play('move');
       movePiece(selectedPieceId, move.position, move.pathType, move.isFinish);
+      return;
+    }
+
+    // If start position (0) is clicked and no piece selected, auto-select a home piece
+    if (pos === 0 && !selectedPieceId && currentYut && turnPhase === 'selecting') {
+      const currentPlayer = players[currentPlayerIndex];
+      const homePieces = currentPlayer?.pieces.filter((p) => p.position === -1) ?? [];
+      if (homePieces.length > 0 && currentYut.steps > 0) {
+        soundManager.play('click');
+        selectPiece(homePieces[0].id);
+      }
     }
   };
 

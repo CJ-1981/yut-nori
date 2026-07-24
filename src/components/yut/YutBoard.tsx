@@ -184,6 +184,19 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
                   }}
                 />
               )}
+              {/* Start position (0) is always clickable for auto-selecting home piece */}
+              {pos === 0 && !isPossible && (
+                <circle
+                  r={30}
+                  fill="transparent"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => onPositionClick(pos)}
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    onPositionClick(pos);
+                  }}
+                />
+              )}
               {/* Highlight ring (rendered for visual, no pointer events) */}
               {isPossible && (
                 <>
