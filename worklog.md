@@ -681,3 +681,22 @@ Stage Summary:
 - The face that's more horizontal/up (greater angle) determines the result
 - Game logic updates if actual result differs from prediction
 - Game works correctly (Geol result verified)
+
+---
+Task ID: 18
+Agent: Main (Super Z)
+Task: Remove black support bars from yut stick bottom.
+
+Work Log:
+- Removed two dark vertical stripe markings from stick sides
+  * These were running lengthwise and appeared as "black support bars"
+  * Removed both left and right vertical stripe meshes
+- Kept only cross marks at ends (short, on top surface only)
+- Made bottom strip thinner (0.06 → 0.03 height) and smaller (0.28 → 0.26 width)
+- Shortened cross marks (0.2 → 0.15 width) to stay on top surface
+- Result: clean cylindrical sticks with only small end markings
+
+Stage Summary:
+- VLM verified: no black support bars or long strips on bottom/sides
+- Bottom is clean
+- Sticks have clean cylindrical appearance with only short end marks

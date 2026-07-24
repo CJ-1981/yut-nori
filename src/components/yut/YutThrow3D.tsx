@@ -149,28 +149,20 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
         <meshStandardMaterial color="#E8C887" roughness={0.5} metalness={0.1} />
       </mesh>
 
-      {/* Flat bottom side - brown box (or red for back-do stick) */}
-      <mesh castShadow receiveShadow position={[0, -0.08, 0]}>
-        <boxGeometry args={[0.28, 0.06, 1.55]} />
+      {/* Flat bottom side - thin colored strip (or red for back-do stick) */}
+      {/* Only visible when stick lands bottom-up, no support bars */}
+      <mesh castShadow receiveShadow position={[0, -0.05, 0]}>
+        <boxGeometry args={[0.26, 0.03, 1.5]} />
         <meshStandardMaterial color={bottomColor} roughness={0.85} metalness={0.0} />
       </mesh>
 
-      {/* Markings on top (round surface) - dark vertical stripes */}
-      <mesh position={[-0.08, 0.13, 0]} castShadow>
-        <boxGeometry args={[0.02, 0.01, 1.3]} />
+      {/* Markings on top (round surface) - only cross marks at ends, no side bars */}
+      <mesh position={[0, 0.15, 0.5]} castShadow>
+        <boxGeometry args={[0.15, 0.01, 0.03]} />
         <meshStandardMaterial color="#3D2410" roughness={0.7} />
       </mesh>
-      <mesh position={[0.08, 0.13, 0]} castShadow>
-        <boxGeometry args={[0.02, 0.01, 1.3]} />
-        <meshStandardMaterial color="#3D2410" roughness={0.7} />
-      </mesh>
-      {/* Cross markings near ends */}
-      <mesh position={[0, 0.14, 0.5]} castShadow>
-        <boxGeometry args={[0.2, 0.01, 0.03]} />
-        <meshStandardMaterial color="#3D2410" roughness={0.7} />
-      </mesh>
-      <mesh position={[0, 0.14, -0.5]} castShadow>
-        <boxGeometry args={[0.2, 0.01, 0.03]} />
+      <mesh position={[0, 0.15, -0.5]} castShadow>
+        <boxGeometry args={[0.15, 0.01, 0.03]} />
         <meshStandardMaterial color="#3D2410" roughness={0.7} />
       </mesh>
     </RigidBody>
