@@ -280,20 +280,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const piece = player.pieces.find((p) => p.id === pieceId);
     if (!piece) return;
 
+    // Find carrier: if selected piece is carried by another, use carrier as main
+    let mainPieceId = pieceId;
+    let allCarried = [...piece.carrying];
+    const carrier = player.pieces.find((p) => p.carrying.includes(pieceId));
+    if (carrier) {
+      mainPieceId = carrier.id;
+      allCarried = [...carrier.carrying];
+    }
+
     const newPos = targetPos;
     const newPath = targetPath;
     let captured: { pieceId: string; playerId: number }[] = [];
 
-    // Check for captures (only if not finishing)
-    // Capture = landing on a position occupied by an OPPONENT piece
     if (!isFinish && newPos >= 0) {
       for (const otherPlayer of state.players) {
         if (otherPlayer.id === player.id) continue;
         for (const otherPiece of otherPlayer.pieces) {
-          // Capture the piece at this position (and any pieces it's carrying)
           if (otherPiece.position === newPos) {
             captured.push({ pieceId: otherPiece.id, playerId: otherPlayer.id });
-            // Also capture any pieces being carried by this piece
             for (const carriedId of otherPiece.carrying) {
               captured.push({ pieceId: carriedId, playerId: otherPlayer.id });
             }
@@ -302,27 +307,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
     }
 
-    // Check for carry (landing on own piece - grouping)
-    let carried: string[] = [];
+    let carried = [...allCarried];
     if (!isFinish && newPos >= 0) {
       for (const ownPiece of player.pieces) {
-        if (ownPiece.id === piece.id) continue;
+        if (ownPiece.id === mainPieceId || allCarried.includes(ownPiece.id)) continue;
         if (ownPiece.position === newPos && ownPiece.position !== -2) {
-          carried.push(ownPiece.id);
-          // Also include any pieces being carried by the piece we're grouping with
+          if (!carried.includes(ownPiece.id)) carried.push(ownPiece.id);
           for (const subCarried of ownPiece.carrying) {
-            if (!carried.includes(subCarried)) {
-              carried.push(subCarried);
-            }
+            if (!carried.includes(subCarried)) carried.push(subCarried);
           }
         }
       }
     }
 
-    // Build updated players array (immutable)
     const capturedIds = new Set(captured.map((c) => c.pieceId));
     const updatedPlayers = state.players.map((p) => {
-      // Reset captured pieces (for other players) - send them home
       if (capturedIds.size > 0 && p.id !== player.id) {
         return {
           ...p,
@@ -333,26 +332,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
           ),
         };
       }
-      // Update moving player's pieces
       if (p.id !== player.id) return p;
       return {
         ...p,
         pieces: p.pieces.map((pc) => {
-          if (pc.id === piece.id) {
-            return {
-              ...pc,
-              position: isFinish ? -2 : newPos,
-              pathType: isFinish ? undefined : newPath,
-              carrying: carried,
-            };
+          if (pc.id === mainPieceId) {
+            return { ...pc, position: isFinish ? -2 : newPos, pathType: isFinish ? undefined : newPath, carrying: carried };
           }
-          // Carried pieces move with the carrier
           if (carried.includes(pc.id)) {
-            return {
-              ...pc,
-              position: isFinish ? -2 : newPos,
-              pathType: isFinish ? undefined : newPath,
-            };
+            return { ...pc, position: isFinish ? -2 : newPos, pathType: isFinish ? undefined : newPath };
           }
           return pc;
         }),
@@ -369,12 +357,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
 
     const hadCapture = captured.length > 0;
-    const hadCarry = carried.length > 0;
+    const hadNewCarry = carried.length > allCarried.length;
     const extraTurn = isFinish || hadCapture || (state.currentYut?.extraTurn ?? false);
 
     let message = 'move';
     if (hadCapture) message = `capture:${captured.length}`;
-    else if (hadCarry) message = `carry:${carried.length}`;
+    else if (hadNewCarry) message = `carry:${carried.length}`;
     else if (isFinish) message = 'finish';
 
     set({

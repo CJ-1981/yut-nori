@@ -184,8 +184,8 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
                   }}
                 />
               )}
-              {/* Start position (0) is always clickable for auto-selecting home piece */}
-              {pos === 0 && !isPossible && (
+              {/* Start position (0) is always clickable */}
+              {pos === 0 && (
                 <circle
                   r={30}
                   fill="transparent"
@@ -340,17 +340,27 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
                 style={{
                   transform: `translate(${finalX}px, ${finalY}px) scale(${pieceScale})`,
                   transition: 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                  cursor: isPossibleTarget ? 'pointer' : (p.playerId === currentPlayerIndex && !p.isCarried && !isHome ? 'pointer' : 'default'),
-                  pointerEvents: isPossibleTarget ? 'none' : 'auto',
+                  cursor: (p.playerId === currentPlayerIndex && !p.isCarried && !isHome) ? 'pointer' : 'default',
+                  pointerEvents: (p.playerId === currentPlayerIndex && !p.isCarried && !isHome) ? 'auto' : 'none',
                 }}
                 onClick={(e) => {
-                  if (isPossibleTarget) return;
+                  e.stopPropagation();
+                  if (p.playerId === currentPlayerIndex && !p.isCarried && !isHome) {
+                    selectPiece(selectedPieceId === p.pieceId ? null : p.pieceId);
+                  }
+                }}
+                onTouchStart={(e) => {
+                  e.preventDefault();
                   e.stopPropagation();
                   if (p.playerId === currentPlayerIndex && !p.isCarried && !isHome) {
                     selectPiece(selectedPieceId === p.pieceId ? null : p.pieceId);
                   }
                 }}
               >
+                {/* Large invisible touch target for piece selection */}
+                {p.playerId === currentPlayerIndex && !p.isCarried && !isHome && (
+                  <circle r={28} fill="transparent" style={{ cursor: 'pointer' }} />
+                )}
                 {/* Selected highlight */}
                 {isSelected && (
                   <circle r={26} fill="none" stroke="#FCD34D" strokeWidth={4} className="animate-pulse" style={{ pointerEvents: 'none' }} />

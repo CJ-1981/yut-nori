@@ -107,21 +107,37 @@ export function GameScreen() {
   }, [turnPhase, currentYut, selectedPieceId, players, currentPlayerIndex, selectPiece]);
 
   const handlePositionClick = (pos: number) => {
+    // Start position (0) click: select home piece or bring it out
+    if (pos === 0 && currentYut && currentYut.steps > 0) {
+      const currentPlayer = players[currentPlayerIndex];
+      const homePieces = currentPlayer?.pieces.filter((p) => p.position === -1) ?? [];
+
+      if (homePieces.length > 0) {
+        // If home piece already selected, bring it out (move)
+        if (selectedPieceId) {
+          const selectedPiece = currentPlayer?.pieces.find((p) => p.id === selectedPieceId);
+          if (selectedPiece && selectedPiece.position === -1) {
+            const moveFromStart = possibleMoves.find((m) => true);
+            if (moveFromStart) {
+              soundManager.play('move');
+              movePiece(selectedPieceId, moveFromStart.position, moveFromStart.pathType, moveFromStart.isFinish);
+              return;
+            }
+          }
+        }
+        // Otherwise select first home piece
+        soundManager.play('click');
+        selectPiece(homePieces[0].id);
+        return;
+      }
+    }
+
+    // Normal move: if a move target is clicked and a piece is selected
     const move = possibleMoves.find((m) => m.position === pos);
     if (move && selectedPieceId) {
       soundManager.play('move');
       movePiece(selectedPieceId, move.position, move.pathType, move.isFinish);
       return;
-    }
-
-    // If start position (0) is clicked and no piece selected, auto-select a home piece
-    if (pos === 0 && !selectedPieceId && currentYut && turnPhase === 'selecting') {
-      const currentPlayer = players[currentPlayerIndex];
-      const homePieces = currentPlayer?.pieces.filter((p) => p.position === -1) ?? [];
-      if (homePieces.length > 0 && currentYut.steps > 0) {
-        soundManager.play('click');
-        selectPiece(homePieces[0].id);
-      }
     }
   };
 
