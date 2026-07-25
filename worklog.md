@@ -967,3 +967,48 @@ Stage Summary:
   changes.
 - Going back from step 2 to step 1 and changing player count no longer
   wipes existing customizations.
+
+---
+Task ID: 46
+Agent: Main (Super Z)
+Task: Speed up the yut throwing animation - reduce time to judgment.
+
+Work Log:
+- Tuned physics throw in `src/components/yut/YutThrow3D.tsx`:
+  * Stick start height: y=3.5 -> y=2.0 (less airtime)
+  * Upward velocity: 5-8 -> 2.5-4.0 (gentler toss, lands sooner)
+  * Horizontal velocity: ±1.5 -> ±1.2 (less wandering)
+  * Angular velocity X: 5-9 -> 6-10 (kept lively so result is varied)
+  * Min settle wait before checking: 2.0s -> 0.8s
+  * Settle threshold (speed/angular): 0.05 -> 0.1 (accept earlier)
+  * Stable-frame window: 30 -> 12 frames (~0.2s instead of ~0.5s)
+  * maxWaitTime ceiling: 8.0s -> 3.5s
+  * Post-settle delay before onAnimationEnd: 500ms -> 150ms
+
+- Tuned camera animation:
+  * throwPhaseDuration: 3.0s -> 1.2s
+  * rotateDuration: 1.0s -> 0.5s
+  * Lowered camera start height: y=9 -> y=7
+  * Lowered camera end height: y=6 -> y=5
+
+- Tuned `src/components/yut/YutThrowPanel.tsx`:
+  * Delay before showing result banner: 800ms -> 250ms
+  * Delay before showing continue button: 600ms -> 250ms
+  * Auto-continue timeout: 5s -> 3s
+
+Stage Summary:
+- Total time from "throw" click to judgment banner: ~6-8s previously,
+  now ~2-3s typical.
+- Sticks still complete their physics settle naturally; only the
+  generous time buffers and high initial toss were trimmed.
+- Dev server verified: HTTP 200 on /, no compile errors.
+
+Total timing breakdown now:
+  - Camera throw phase:    1.2s
+  - Camera rotate:         0.5s
+  - Physics min settle:    0.8s
+  - Stable window:         ~0.2s
+  - Post-settle delay:     0.15s
+  - Result banner reveal:  0.25s
+  - Continue button:       +0.25s
+  Typical total:           ~2.5-3.0s

@@ -28,7 +28,7 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
   const settledReportedRef = useRef(false);
   const hasSettledRef = useRef(false);
   const throwStartTimeRef = useRef(0);
-  const maxWaitTime = 8.0;
+  const maxWaitTime = 3.5;
 
   // Random initial throw parameters per stick - spread out starting positions
   const throwParams = useMemo(() => {
@@ -37,12 +37,12 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
     return {
       startX: gridX * 0.9 + (Math.random() - 0.5) * 0.2,
       startZ: gridZ * 0.9 + (Math.random() - 0.5) * 0.2,
-      velX: (Math.random() - 0.5) * 1.5,
-      velY: 5 + Math.random() * 3,
-      velZ: (Math.random() - 0.5) * 1.5,
-      angVelX: 5 + Math.random() * 4,
-      angVelY: (Math.random() - 0.5) * 3,
-      angVelZ: (Math.random() - 0.5) * 3,
+      velX: (Math.random() - 0.5) * 1.2,
+      velY: 2.5 + Math.random() * 1.5,
+      velZ: (Math.random() - 0.5) * 1.2,
+      angVelX: 6 + Math.random() * 4,
+      angVelY: (Math.random() - 0.5) * 2.5,
+      angVelZ: (Math.random() - 0.5) * 2.5,
     };
   }, []);
 
@@ -53,7 +53,7 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
       if (rigidBodyRef.current && !initializedRef.current) {
         const rb = rigidBodyRef.current;
         initializedRef.current = true;
-        rb.setTranslation({ x: throwParams.startX, y: 3.5, z: throwParams.startZ }, true);
+        rb.setTranslation({ x: throwParams.startX, y: 2.0, z: throwParams.startZ }, true);
         // Random initial rotation
         const initRotX = Math.random() * Math.PI * 2;
         const initRotY = Math.random() * Math.PI * 2;
@@ -101,15 +101,15 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
     }
 
     const elapsed = (performance.now() - throwStartTimeRef.current) / 1000;
-    if (elapsed < 2.0) return;
+    if (elapsed < 0.8) return;
 
-    const isSlowEnough = speed < 0.05 && angSpeed < 0.05;
+    const isSlowEnough = speed < 0.1 && angSpeed < 0.1;
     const isLowEnough = translation.y <= 0.12;
     const isTimeout = elapsed > maxWaitTime;
 
     if ((isSlowEnough && isLowEnough) || isTimeout) {
       settleTimerRef.current += 1;
-      if ((settleTimerRef.current > 30 || isTimeout) && !hasSettledRef.current) {
+      if ((settleTimerRef.current > 12 || isTimeout) && !hasSettledRef.current) {
         hasSettledRef.current = true;
 
         // Force to exact ground resting position
@@ -143,7 +143,7 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
 
         if (!endCalledRef.current) {
           endCalledRef.current = true;
-          setTimeout(() => onAnimationEnd(), 500);
+          setTimeout(() => onAnimationEnd(), 150);
         }
       }
     } else {
@@ -222,7 +222,7 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
     <RigidBody
       ref={rigidBodyRef}
       colliders={false}
-      position={[throwParams.startX, 3.5, throwParams.startZ]}
+      position={[throwParams.startX, 2.0, throwParams.startZ]}
       restitution={0.0}
       friction={1.0}
       linearDamping={1.0}
@@ -318,8 +318,8 @@ function CameraController({ isThrown, onAnimationDone }: { isThrown: boolean; on
   const phase = useRef<'throw' | 'done'>('throw');
   const doneCalled = useRef(false);
 
-  const startCam = useRef(new THREE.Vector3(0, 9, 2));
-  const endCam = useRef(new THREE.Vector3(0, 6, 4.5));
+  const startCam = useRef(new THREE.Vector3(0, 7, 2));
+  const endCam = useRef(new THREE.Vector3(0, 5, 4.5));
 
   useEffect(() => {
     if (isThrown) {
@@ -334,8 +334,8 @@ function CameraController({ isThrown, onAnimationDone }: { isThrown: boolean; on
   useFrame(() => {
     if (!isThrown || phase.current === 'done') return;
     const elapsed = (performance.now() - startTime.current) / 1000;
-    const throwPhaseDuration = 3.0;
-    const rotateDuration = 1.0;
+    const throwPhaseDuration = 1.2;
+    const rotateDuration = 0.5;
 
     if (elapsed < throwPhaseDuration) {
       phase.current = 'throw';

@@ -143,8 +143,8 @@ export function YutThrowPanel() {
     setTimeout(() => {
       soundManager.play(result.replace('-', '') as any);
       setShowResult(true);
-      setTimeout(() => setShowContinue(true), 600);
-    }, 800);
+      setTimeout(() => setShowContinue(true), 250);
+    }, 250);
   };
 
   // Auto-continue after a delay if user doesn't click
@@ -154,7 +154,7 @@ export function YutThrowPanel() {
     if (showContinue && !userInteracting) {
       const timer = setTimeout(() => {
         handleContinue();
-      }, 5000); // longer delay to allow camera exploration
+      }, 3000); // snappier auto-continue
       return () => clearTimeout(timer);
     }
   }, [showContinue, userInteracting]);
