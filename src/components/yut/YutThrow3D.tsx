@@ -100,20 +100,39 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
       rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
     }
 
+    // CONTINUOUS CHECK: If stick is near ground and tilted, force flat immediately
+    // This prevents sticks from balancing on their corner/edge
+    if (translation.y < 0.25 && speed < 0.5) {
+      const rot = rb.rotation();
+      const rbQuat = new THREE.Quaternion(rot.x, rot.y, rot.z, rot.w);
+      const localUp = new THREE.Vector3(0, 1, 0);
+      const worldUp = localUp.applyQuaternion(rbQuat);
+
+      if (Math.abs(worldUp.y) < 0.7) {
+        // Stick is tilted near ground - force flat NOW
+        const isTopUp = worldUp.y >= 0;
+        const euler = new THREE.Euler().setFromQuaternion(rbQuat);
+        const targetEuler = new THREE.Euler(isTopUp ? 0 : Math.PI, euler.y, 0);
+        const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
+        rb.setRotation({ x: targetQuat.x, y: targetQuat.y, z: targetQuat.z, w: targetQuat.w }, true);
+        rb.setTranslation({ x: translation.x, y: 0.08, z: translation.z }, true);
+        rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      }
+    }
+
     const elapsed = (performance.now() - throwStartTimeRef.current) / 1000;
     if (elapsed < 1.5) return;
 
     const isSlowEnough = speed < 0.1 && angSpeed < 0.1;
-    // Only accept sticks near ground level (not stacked on other sticks)
     const isLowEnough = translation.y < 0.2;
     const isTimeout = elapsed > maxWaitTime;
 
     if ((isSlowEnough && isLowEnough) || isTimeout) {
       settleTimerRef.current += 1;
-      if ((settleTimerRef.current > 45 || isTimeout) && !hasSettledRef.current) {
+      if ((settleTimerRef.current > 30 || isTimeout) && !hasSettledRef.current) {
         hasSettledRef.current = true;
 
-        // If stick is floating (stacked on another), force it to ground
         if (translation.y > 0.2) {
           rb.setTranslation({ x: translation.x, y: 0.08, z: translation.z }, true);
         }
