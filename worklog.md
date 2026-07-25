@@ -796,3 +796,28 @@ Stage Summary:
 - Results now varied: Do, Geol verified (not always Yut)
 - Settled results properly counted (4 sticks required)
 - Less trembling (no setBodyType, no forced correction)
+
+---
+Task ID: 39
+Agent: Main (Super Z)
+Task: Change yut sticks to half-ellipse shape and thin bottom.
+
+Work Log:
+- Changed cross-section from semicircle to half-ellipse:
+  * Width: 0.15 (same)
+  * Height: 0.1 (was 0.15 = semicircle, now flatter = half-ellipse)
+  * Used bezierCurveTo for smooth ellipse curve instead of absarc
+  * Both geometry and end caps use same half-ellipse shape
+- Thinned bottom plate:
+  * Height: 0.02 → 0.005 (very thin, only color visible)
+  * Position: -0.001 → -0.002 (slightly lower)
+  * Width stays 0.3, length 1.6
+- Updated collider to match:
+  * args: [0.14, 0.05, 0.78] (was [0.14, 0.075, 0.78])
+  * position: [0, 0.05, 0] (was [0, 0.075, 0])
+- Game verified: Geol result normal
+
+Stage Summary:
+- Half-ellipse shape (flatter, more natural yut stick)
+- Thin bottom (0.005 height, only brown/red color visible)
+- Collider matches new shape

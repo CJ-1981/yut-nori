@@ -155,16 +155,16 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
   const isBackDoStick = throwResult?.result === 'back-do' && throwResult.backDoIndex === index;
   const bottomColor = isBackDoStick ? '#DC2626' : '#5C3A1A';
 
-  // Create D-shape (half-circle) cross-section using THREE.Shape
-  // Arc from 0 to PI with clockwise=false goes counter-clockwise: +X → +Y → -X (top half)
+  // Half-ellipse cross-section (wider than tall) for natural yut stick shape
   const halfCylinderGeometry = useMemo(() => {
     const shape = new THREE.Shape();
-    const radius = 0.15;
-    shape.moveTo(-radius, 0);
-    shape.lineTo(radius, 0);
-    // absarc(0, 0, r, 0, PI, false): 0→PI counter-clockwise = +X → +Y → -X (top half)
-    shape.absarc(0, 0, radius, 0, Math.PI, false);
-    shape.lineTo(-radius, 0);
+    const halfWidth = 0.15;
+    const halfHeight = 0.1; // flatter than semicircle = half-ellipse
+    shape.moveTo(-halfWidth, 0);
+    shape.lineTo(halfWidth, 0);
+    // Use bezier curve for half-ellipse top
+    shape.bezierCurveTo(halfWidth, halfHeight * 0.55, halfWidth * 0.55, halfHeight, 0, halfHeight);
+    shape.bezierCurveTo(-halfWidth * 0.55, halfHeight, -halfWidth, halfHeight * 0.55, -halfWidth, 0);
     const geom = new THREE.ExtrudeGeometry(shape, {
       depth: 1.6,
       bevelEnabled: false,
@@ -176,11 +176,12 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
 
   const endCapGeometry = useMemo(() => {
     const shape = new THREE.Shape();
-    const radius = 0.15;
-    shape.moveTo(-radius, 0);
-    shape.lineTo(radius, 0);
-    shape.absarc(0, 0, radius, 0, Math.PI, false);
-    shape.lineTo(-radius, 0);
+    const halfWidth = 0.15;
+    const halfHeight = 0.1;
+    shape.moveTo(-halfWidth, 0);
+    shape.lineTo(halfWidth, 0);
+    shape.bezierCurveTo(halfWidth, halfHeight * 0.55, halfWidth * 0.55, halfHeight, 0, halfHeight);
+    shape.bezierCurveTo(-halfWidth * 0.55, halfHeight, -halfWidth, halfHeight * 0.55, -halfWidth, 0);
     return new THREE.ShapeGeometry(shape);
   }, []);
 
@@ -194,21 +195,21 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
       linearDamping={0.5}
       angularDamping={0.3}
     >
-      {/* Collider: matches D-shape, flat bottom prevents 45-degree resting */}
-      <CuboidCollider args={[0.14, 0.075, 0.78]} position={[0, 0.075, 0]} />
+      {/* Collider: matches half-ellipse shape */}
+      <CuboidCollider args={[0.14, 0.05, 0.78]} position={[0, 0.05, 0]} />
 
-      {/* Half-cylinder mesh (light bamboo) - round top */}
+      {/* Half-ellipse mesh (light bamboo) - round top */}
       <mesh ref={meshRef} castShadow receiveShadow geometry={halfCylinderGeometry}>
         <meshStandardMaterial color="#E8C887" roughness={0.5} metalness={0.1} side={THREE.DoubleSide} />
       </mesh>
 
-      {/* Flat bottom (brown or red) */}
-      <mesh castShadow receiveShadow position={[0, -0.001, 0]}>
-        <boxGeometry args={[0.3, 0.02, 1.6]} />
+      {/* Thin flat bottom (brown or red) - only color visible */}
+      <mesh castShadow receiveShadow position={[0, -0.002, 0]}>
+        <boxGeometry args={[0.3, 0.005, 1.6]} />
         <meshStandardMaterial color={bottomColor} roughness={0.85} metalness={0.0} />
       </mesh>
 
-      {/* End caps (D-shape) */}
+      {/* End caps (half-ellipse) */}
       <mesh geometry={endCapGeometry} position={[0, 0, 0.8]}>
         <meshStandardMaterial color="#D4A856" roughness={0.5} metalness={0.1} side={THREE.DoubleSide} />
       </mesh>
