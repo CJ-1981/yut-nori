@@ -118,14 +118,25 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
         const rbQuat = new THREE.Quaternion(rot.x, rot.y, rot.z, rot.w);
         const localUp = new THREE.Vector3(0, 1, 0);
         const worldUp = localUp.applyQuaternion(rbQuat);
-        // Measure: round top direction is +Y in local space
-        // y > 0 = round top up (light side) = isTopUp = true
-        // y < 0 = flat bottom up (dark side) = isTopUp = false
-        // |y| < 0.5 = tilted/on edge, judge based on sign (y >= 0 = top)
-        const isTopUp = worldUp.y >= 0;
-
-        // No forced correction - let physics determine final orientation
-        // The D-shape collider naturally prevents stable 45-degree resting
+          // Measure orientation
+        // y > 0.7 = clearly round top up (light side)
+        // y < -0.7 = clearly flat bottom up (dark side)
+        // |y| < 0.7 = tilted/on side → FORCE FLAT: snap to nearest stable orientation
+        let isTopUp: boolean;
+        if (worldUp.y > 0.7) {
+          isTopUp = true;
+        } else if (worldUp.y < -0.7) {
+          isTopUp = false;
+        } else {
+          // Stick is tilted/on side - physically impossible for D-shape
+          // Force to nearest flat orientation based on current tilt direction
+          isTopUp = worldUp.y >= 0;
+          // Apply correction: snap rotation to flat
+          const euler = new THREE.Euler().setFromQuaternion(rbQuat);
+          const targetEuler = new THREE.Euler(isTopUp ? 0 : Math.PI, euler.y, 0);
+          const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
+          rb.setRotation({ x: targetQuat.x, y: targetQuat.y, z: targetQuat.z, w: targetQuat.w }, true);
+        }
 
         // Report result using measured value (before any correction side effects)
         if (!settledReportedRef.current) {

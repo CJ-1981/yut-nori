@@ -846,3 +846,26 @@ Stage Summary:
 - No more floating boxes
 - Half-ellipse shape preserved
 - Clean rendering verified
+
+---
+Task ID: 41
+Agent: Main (Super Z)
+Task: Force sticks flat when tilted - physically impossible to stand on side.
+
+Work Log:
+- Added forced orientation correction for tilted sticks:
+  * y > 0.7 = clearly round top up → accept as is
+  * y < -0.7 = clearly flat bottom up → accept as is
+  * |y| < 0.7 = tilted/on side → FORCE FLAT
+  * Forces rotation to nearest stable orientation (0 or PI on X axis)
+  * Keeps Y rotation (spin) for natural appearance
+  * Judgment based on sign of y (y >= 0 = top up)
+- Previous approach of "no correction" didn't work because box collider
+  allows stable resting on side at 45-90 degrees
+- Now any stick that settles at an angle gets snapped to flat
+  immediately before judgment is reported
+
+Stage Summary:
+- Sticks can no longer remain standing on side/edge
+- Forced correction snaps to nearest flat orientation
+- Results verified: Geol (multiple throws)
