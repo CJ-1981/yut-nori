@@ -76,19 +76,11 @@ export function YutThrowPanel() {
     setShowContinue(false);
     setDisplayResult(null);
 
-    // Generate the result immediately but reveal after physics simulation settles
+    // Generate the predicted result (for physics simulation visual)
     const result = throwYut();
     setDisplayResult(result);
 
-    // Play result sound after physics throw + settle + camera rotation
-    // Timeline: physics throw+settle(~2.5s) + camera rotate(1.0s) = 3.5s
-    setTimeout(() => {
-      soundManager.play(result.result.replace('-', '') as any);
-      setShowResult(true);
-      setTimeout(() => {
-        setShowContinue(true);
-      }, 600);
-    }, 4000);
+    // Do NOT show result here - wait for handleActualResult from physics
   };
 
   const handleAnimationEnd = () => {

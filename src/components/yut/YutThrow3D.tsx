@@ -28,7 +28,7 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
   const settledReportedRef = useRef(false);
   const hasSettledRef = useRef(false);
   const throwStartTimeRef = useRef(0);
-  const maxWaitTime = 7.0;
+  const maxWaitTime = 8.0;
 
   // Random initial throw parameters per stick - spread out starting positions
   const throwParams = useMemo(() => {
@@ -40,9 +40,9 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
       velX: (Math.random() - 0.5) * 1.5,
       velY: 5 + Math.random() * 3,
       velZ: (Math.random() - 0.5) * 1.5,
-      angVelX: 8 + Math.random() * 6,
-      angVelY: (Math.random() - 0.5) * 4,
-      angVelZ: (Math.random() - 0.5) * 5,
+      angVelX: 5 + Math.random() * 4,
+      angVelY: (Math.random() - 0.5) * 3,
+      angVelZ: (Math.random() - 0.5) * 3,
     };
   }, []);
 
@@ -95,15 +95,16 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
     }
 
     // Prevent sticks from going below ground
-    if (translation.y < 0.05) {
+    if (translation.y < 0.08) {
       rb.setTranslation({ x: translation.x, y: 0.08, z: translation.z }, true);
+      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
     }
 
     const elapsed = (performance.now() - throwStartTimeRef.current) / 1000;
-    if (elapsed < 1.5) return;
+    if (elapsed < 2.0) return;
 
-    const isSlowEnough = speed < 0.15 && angSpeed < 0.15;
-    const isLowEnough = translation.y < 0.2;
+    const isSlowEnough = speed < 0.05 && angSpeed < 0.05;
+    const isLowEnough = translation.y <= 0.12;
     const isTimeout = elapsed > maxWaitTime;
 
     if ((isSlowEnough && isLowEnough) || isTimeout) {
@@ -111,7 +112,7 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
       if ((settleTimerRef.current > 30 || isTimeout) && !hasSettledRef.current) {
         hasSettledRef.current = true;
 
-        // Force stick to ground level
+        // Force to exact ground resting position
         rb.setTranslation({ x: translation.x, y: 0.08, z: translation.z }, true);
 
         // Measure orientation
@@ -120,7 +121,7 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
         const localUp = new THREE.Vector3(0, 1, 0);
         const worldUp = localUp.applyQuaternion(rbQuat);
 
-        // Always force flat: snap to 0 or PI based on current tilt
+        // Determine top/bottom and force flat
         const isTopUp = worldUp.y >= 0;
         const euler = new THREE.Euler().setFromQuaternion(rbQuat);
         const targetEuler = new THREE.Euler(isTopUp ? 0 : Math.PI, euler.y, 0);
@@ -133,7 +134,7 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
           onStickSettled?.(index, isTopUp);
         }
 
-        // Freeze
+        // Freeze completely
         rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
         rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
         rb.setEnabled(false);
@@ -224,11 +225,11 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
       position={[throwParams.startX, 3.5, throwParams.startZ]}
       restitution={0.0}
       friction={1.0}
-      linearDamping={0.8}
-      angularDamping={0.8}
+      linearDamping={1.0}
+      angularDamping={1.0}
     >
-      {/* Collider: matches half-ellipse shape */}
-      <CuboidCollider args={[0.14, 0.075, 0.78]} position={[0, 0.075, 0]} />
+      {/* Collider: wider and taller to match actual mesh bounds */}
+      <CuboidCollider args={[0.15, 0.08, 0.8]} position={[0, 0.08, 0]} />
 
       {/* Half-ellipse mesh with texture (light bamboo + markings) */}
       <mesh ref={meshRef} castShadow receiveShadow geometry={halfCylinderGeometry}>

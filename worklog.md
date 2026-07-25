@@ -890,3 +890,47 @@ Stage Summary:
 - All sticks lying flat
 - No sticks stacked on each other
 - Geol result correct
+
+---
+Task ID: 44
+Agent: Main (Super Z)
+Task: Full physics redesign - fix all rendering/judgment/timing issues.
+
+Work Log:
+- Removed premature result display from handleThrow:
+  * Previously: 4s setTimeout showed predicted result immediately
+  * Now: NO result shown until handleActualResult called by physics
+  * Prevents double result (predicted then actual)
+  * Yut history uses actual result only
+
+- Increased damping to prevent trembling:
+  * linearDamping: 0.8 → 1.0
+  * angularDamping: 0.8 → 1.0
+  * High damping stops sticks quickly without bouncing
+
+- Reduced angular velocity:
+  * angVelX: 8-14 → 5-9 (less violent, less edge landing)
+  * angVelY: ±2 → ±1.5
+  * angVelZ: ±2.5 → ±1.5
+
+- Tightened ground collision:
+  * Below ground check: y < 0.05 → y < 0.08
+  * Also zero velocity when pushing back up (prevents micro-bouncing)
+  * Settle threshold: y < 0.2 → y ≤ 0.12 (tighter, must be very close to ground)
+
+- Enlarged collider to match mesh:
+  * args: [0.14, 0.075, 0.78] → [0.15, 0.08, 0.8]
+  * position: [0, 0.075, 0] → [0, 0.08, 0]
+  * Prevents mesh extending below collider (no more going underground)
+  * Prevents penetration between sticks
+
+- Increased minimum wait: 1.5s → 2.0s
+- Increased maxWaitTime: 7.0 → 8.0
+
+Stage Summary:
+- No more double result display
+- Result only shown after physics measurement
+- Yut history uses actual result
+- Higher damping prevents trembling
+- Tighter ground collision prevents floating/sinking
+- Larger collider prevents penetration and underground mesh
