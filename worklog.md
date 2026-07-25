@@ -821,3 +821,28 @@ Stage Summary:
 - Half-ellipse shape (flatter, more natural yut stick)
 - Thin bottom (0.005 height, only brown/red color visible)
 - Collider matches new shape
+
+---
+Task ID: 40
+Agent: Main (Super Z)
+Task: Change stick markings from floating boxes to texture on surface.
+
+Work Log:
+- Removed floating box meshes for markings
+- Created CanvasTexture with markings drawn directly:
+  * Canvas 256x64, filled with bamboo color #E8C887
+  * Dark cross marks (#3D2410) at both ends
+  * Left mark: horizontal bar (40x4) + vertical bar (8x32)
+  * Right mark: same pattern mirrored
+- Added custom UV mapping to ExtrudeGeometry:
+  * U: mapped to Z axis (length, -0.8 to 0.8 → 0 to 1)
+  * V: mapped to Y axis (height, 0 to halfHeight → 0 to 1)
+  * Ensures texture wraps correctly on curved surface
+- Applied texture to meshStandardMaterial via map prop
+- VLM verified: markings ON surface (not floating), proper UV mapping
+
+Stage Summary:
+- Markings are now textures drawn on stick surface
+- No more floating boxes
+- Half-ellipse shape preserved
+- Clean rendering verified

@@ -155,14 +155,13 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
   const isBackDoStick = throwResult?.result === 'back-do' && throwResult.backDoIndex === index;
   const bottomColor = isBackDoStick ? '#DC2626' : '#5C3A1A';
 
-  // Half-ellipse cross-section (wider than tall) for natural yut stick shape
+  // Half-ellipse cross-section with UV mapping for texture
   const halfCylinderGeometry = useMemo(() => {
     const shape = new THREE.Shape();
     const halfWidth = 0.15;
-    const halfHeight = 0.1; // flatter than semicircle = half-ellipse
+    const halfHeight = 0.1;
     shape.moveTo(-halfWidth, 0);
     shape.lineTo(halfWidth, 0);
-    // Use bezier curve for half-ellipse top
     shape.bezierCurveTo(halfWidth, halfHeight * 0.55, halfWidth * 0.55, halfHeight, 0, halfHeight);
     shape.bezierCurveTo(-halfWidth * 0.55, halfHeight, -halfWidth, halfHeight * 0.55, -halfWidth, 0);
     const geom = new THREE.ExtrudeGeometry(shape, {
@@ -171,7 +170,44 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
       steps: 1,
     });
     geom.translate(0, 0, -0.8);
+    // Generate UVs: map Z (length) to U (0-1), Y (height) to V (0-1)
+    const pos = geom.attributes.position;
+    const uv = geom.attributes.uv;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const y = pos.getY(i);
+      const z = pos.getZ(i);
+      // U: along length (z from -0.8 to 0.8 → 0 to 1)
+      const u = (z + 0.8) / 1.6;
+      // V: 0 at bottom (y=0), 1 at top (y=halfHeight)
+      const v = Math.max(0, Math.min(1, y / halfHeight));
+      uv.setXY(i, u, v);
+    }
+    uv.needsUpdate = true;
     return geom;
+  }, []);
+
+  // Create canvas texture with markings drawn on the surface
+  const stickTexture = useMemo(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d')!;
+    // Fill with bamboo color
+    ctx.fillStyle = '#E8C887';
+    ctx.fillRect(0, 0, 256, 64);
+    // Draw dark markings near both ends (cross marks)
+    ctx.fillStyle = '#3D2410';
+    // Left end mark
+    ctx.fillRect(20, 24, 40, 4);
+    ctx.fillRect(36, 10, 8, 32);
+    // Right end mark
+    ctx.fillRect(196, 24, 40, 4);
+    ctx.fillRect(212, 10, 8, 32);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.ClampToEdgeWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
+    return tex;
   }, []);
 
   const endCapGeometry = useMemo(() => {
@@ -198,9 +234,9 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
       {/* Collider: matches half-ellipse shape */}
       <CuboidCollider args={[0.14, 0.05, 0.78]} position={[0, 0.05, 0]} />
 
-      {/* Half-ellipse mesh (light bamboo) - round top */}
+      {/* Half-ellipse mesh with texture (light bamboo + markings) */}
       <mesh ref={meshRef} castShadow receiveShadow geometry={halfCylinderGeometry}>
-        <meshStandardMaterial color="#E8C887" roughness={0.5} metalness={0.1} side={THREE.DoubleSide} />
+        <meshStandardMaterial map={stickTexture} roughness={0.5} metalness={0.1} side={THREE.DoubleSide} />
       </mesh>
 
       {/* Thin flat bottom (brown or red) - only color visible */}
@@ -215,16 +251,6 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
       </mesh>
       <mesh geometry={endCapGeometry} position={[0, 0, -0.8]} rotation={[0, Math.PI, 0]}>
         <meshStandardMaterial color="#D4A856" roughness={0.5} metalness={0.1} side={THREE.DoubleSide} />
-      </mesh>
-
-      {/* Markings on top */}
-      <mesh position={[0, 0.15, 0.5]} castShadow>
-        <boxGeometry args={[0.12, 0.01, 0.03]} />
-        <meshStandardMaterial color="#3D2410" roughness={0.7} />
-      </mesh>
-      <mesh position={[0, 0.15, -0.5]} castShadow>
-        <boxGeometry args={[0.12, 0.01, 0.03]} />
-        <meshStandardMaterial color="#3D2410" roughness={0.7} />
       </mesh>
     </RigidBody>
   );
