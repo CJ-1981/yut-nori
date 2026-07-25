@@ -700,3 +700,37 @@ Stage Summary:
 - VLM verified: no black support bars or long strips on bottom/sides
 - Bottom is clean
 - Sticks have clean cylindrical appearance with only short end marks
+
+---
+Task ID: 36
+Agent: Main (Super Z)
+Task: Restore half-cylinder shape and throw higher.
+
+Work Log:
+- Restored half-cylinder (D-shape) using ExtrudeGeometry:
+  * Was reverted to full cylinder in previous edit
+  * Recreated D-shape with THREE.Shape + ExtrudeGeometry
+  * End caps with ShapeGeometry
+  * Flat bottom plate (brown/red)
+  * D-shape collider at [0, 0.075, 0] matching geometry
+- Fixed 45-degree correction threshold:
+  * Only correct if |y| < 0.7 (more than 45 degrees tilt)
+  * y > 0.7 or y < -0.7 = acceptably flat, NO correction
+  * Preserves D-shape appearance (no forced rotation for normal sticks)
+- Increased throw height:
+  * Start position Y: 2.0 → 3.5
+  * Upward velocity: 2+random*1 → 5+random*3 (much higher)
+  * Random initial rotation for natural scatter
+- Restored all settle logic:
+  * 3-second minimum wait before checking
+  * 90-frame settle confirmation
+  * hasSettledRef for immediate stop
+  * setBodyType(1) for complete freeze
+  * maxWaitTime = 10s
+- Camera throwPhaseDuration: 2.5s → 5.0s
+
+Stage Summary:
+- Half-cylinder D-shape restored (not full cylinder)
+- Throw much higher (5-8 upward velocity from 3.5 height)
+- 45-degree correction only for > 45 degrees tilt
+- Game verified: Geol result

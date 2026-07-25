@@ -25,42 +25,49 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
   const endCalledRef = useRef(false);
   const initializedRef = useRef(false);
   const settledReportedRef = useRef(false);
+  const hasSettledRef = useRef(false);
+  const throwStartTimeRef = useRef(0);
+  const maxWaitTime = 10.0;
 
   // Random initial throw parameters per stick - spread out starting positions
   const throwParams = useMemo(() => {
-    // Spread sticks in a 2x2 grid pattern with random offset
-    const gridX = (index % 2) * 2 - 1; // -1 or 1
-    const gridZ = Math.floor(index / 2) * 2 - 1; // -1 or 1
+    const gridX = (index % 2) * 2 - 1;
+    const gridZ = Math.floor(index / 2) * 2 - 1;
     return {
-      startX: gridX * 0.6 + (Math.random() - 0.5) * 0.2,
-      startZ: gridZ * 0.6 + (Math.random() - 0.5) * 0.2,
-      // Drop from above with slight random velocity
-      velX: (Math.random() - 0.5) * 0.8,
-      velY: 2 + Math.random() * 1,
-      velZ: (Math.random() - 0.5) * 0.8,
-      // Reduced angular velocity to prevent excessive tumbling
-      angVelX: (Math.random() - 0.5) * 5,
-      angVelY: (Math.random() - 0.5) * 4,
-      angVelZ: (Math.random() - 0.5) * 5,
+      startX: gridX * 0.9 + (Math.random() - 0.5) * 0.2,
+      startZ: gridZ * 0.9 + (Math.random() - 0.5) * 0.2,
+      velX: (Math.random() - 0.5) * 1.5,
+      velY: 5 + Math.random() * 3, // much higher throw
+      velZ: (Math.random() - 0.5) * 1.5,
+      angVelX: 6 + Math.random() * 4, // strong flip
+      angVelY: (Math.random() - 0.5) * 3,
+      angVelZ: (Math.random() - 0.5) * 4,
     };
   }, []);
 
-  // Apply throw impulse after physics body is ready
   useEffect(() => {
     if (!isThrown) return;
-
     let attempts = 0;
     const tryInit = () => {
       if (rigidBodyRef.current && !initializedRef.current) {
         const rb = rigidBodyRef.current;
         initializedRef.current = true;
-        // Drop sticks from height with random rotation
-        rb.setTranslation({ x: throwParams.startX, y: 2.0, z: throwParams.startZ }, true);
+        rb.setTranslation({ x: throwParams.startX, y: 3.5, z: throwParams.startZ }, true);
+        // Random initial rotation
+        const initRotX = Math.random() * Math.PI * 2;
+        const initRotY = Math.random() * Math.PI * 2;
+        const initRotZ = Math.random() * Math.PI * 2;
+        const initQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(initRotX, initRotY, initRotZ));
+        rb.setRotation({ x: initQuat.x, y: initQuat.y, z: initQuat.z, w: initQuat.w }, true);
         rb.setLinvel({ x: throwParams.velX, y: throwParams.velY, z: throwParams.velZ }, true);
         rb.setAngvel({ x: throwParams.angVelX, y: throwParams.angVelY, z: throwParams.angVelZ }, true);
         setHasSettled(false);
         setCollisionSoundPlayed(false);
         endCalledRef.current = false;
+        settledReportedRef.current = false;
+        settleTimerRef.current = 0;
+        hasSettledRef.current = false;
+        throwStartTimeRef.current = performance.now();
       } else if (attempts < 20) {
         attempts++;
         setTimeout(tryInit, 50);
@@ -71,7 +78,7 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
 
   // Monitor settling and play sounds
   useFrame(() => {
-    if (!isThrown || !rigidBodyRef.current || hasSettled || !initializedRef.current) return;
+    if (!isThrown || !rigidBodyRef.current || hasSettledRef.current || !initializedRef.current) return;
 
     const rb = rigidBodyRef.current;
     const translation = rb.translation();
@@ -81,37 +88,57 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
     const speed = Math.sqrt(linvel.x ** 2 + linvel.y ** 2 + linvel.z ** 2);
     const angSpeed = Math.sqrt(angvel.x ** 2 + angvel.y ** 2 + angvel.z ** 2);
 
-    // Play collision sound when stick hits ground
     if (!collisionSoundPlayed && translation.y < 0.3 && speed > 1) {
       setCollisionSoundPlayed(true);
       soundManager.play('stickLand');
     }
 
-    // Check if stick has settled
-    if (speed < 0.15 && angSpeed < 0.15 && translation.y < 0.25) {
+    if (translation.y < 0) {
+      rb.setTranslation({ x: translation.x, y: 0.08, z: translation.z }, true);
+      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
+    }
+
+    const elapsed = (performance.now() - throwStartTimeRef.current) / 1000;
+    if (elapsed < 3.0) return;
+
+    const isSlowEnough = speed < 0.15 && angSpeed < 0.15;
+    const isLowEnough = translation.y < 0.5;
+    const isTimeout = elapsed > maxWaitTime;
+
+    if ((isSlowEnough && isLowEnough) || isTimeout) {
       settleTimerRef.current += 1;
-      if (settleTimerRef.current > 20 && !hasSettled) {
+      if ((settleTimerRef.current > 90 || isTimeout) && !hasSettledRef.current) {
+        const rot = rb.rotation();
+        const rbQuat = new THREE.Quaternion(rot.x, rot.y, rot.z, rot.w);
+        const roundTopDirInBody = new THREE.Vector3(0, 1, 0);
+        const worldRoundTopDir = roundTopDirInBody.clone().applyQuaternion(rbQuat);
+
+        // Only correct if tilted more than 45 degrees (|y| < 0.7)
+        if (Math.abs(worldRoundTopDir.y) < 0.7) {
+          const isTopUp = worldRoundTopDir.y >= 0;
+          const euler = new THREE.Euler().setFromQuaternion(rbQuat);
+          const targetEuler = new THREE.Euler(isTopUp ? 0 : Math.PI, euler.y, 0);
+          const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
+          rb.setRotation({ x: targetQuat.x, y: targetQuat.y, z: targetQuat.z, w: targetQuat.w }, true);
+        }
+
+        rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
+        rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        rb.setEnabled(false);
+        rb.setBodyType(1, true);
+
+        hasSettledRef.current = true;
         setHasSettled(true);
 
-        // Measure actual orientation to determine top/bottom face
-        // The cylinder's local "up" direction (Y axis in local space) indicates which face is up
-        // After physics, we check the world-space Y component of the local up vector
-        const rot = rb.rotation();
-        // Create a quaternion from the rotation
-        const quat = new THREE.Quaternion(rot.x, rot.y, rot.z, rot.w);
-        // Local up vector (Y axis) transformed to world space
-        const localUp = new THREE.Vector3(0, 1, 0);
-        const worldUp = localUp.clone().applyQuaternion(quat);
-        // If worldUp.y > 0, the light (top) side is facing up
-        // If worldUp.y < 0, the dark (bottom) side is facing up
-        // Use threshold: if |worldUp.y| > 0.1, it's settled on a face
-        // The side with greater horizontal angle wins (closer to vertical)
-        const isTopUp = worldUp.y > 0;
+        const finalRot = rb.rotation();
+        const finalQuat = new THREE.Quaternion(finalRot.x, finalRot.y, finalRot.z, finalRot.w);
+        const finalWorldUp = roundTopDirInBody.clone().applyQuaternion(finalQuat);
+        const finalIsTopUp = finalWorldUp.y >= -0.3;
 
-        // Report the actual measured result
         if (!settledReportedRef.current) {
           settledReportedRef.current = true;
-          onStickSettled?.(index, isTopUp);
+          onStickSettled?.(index, finalIsTopUp);
         }
 
         if (!endCalledRef.current) {
@@ -124,45 +151,76 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
     }
   });
 
-  // Stick: full cylinder lying horizontally
-  // Top half (light/round) and bottom half (dark brown flat)
-  // For back-do: one stick has red bottom (backDoIndex)
+  // Stick: half-cylinder (D-shape) using ExtrudeGeometry
   const isBackDoStick = throwResult?.result === 'back-do' && throwResult.backDoIndex === index;
-  const bottomColor = isBackDoStick ? '#DC2626' : '#5C3A1A'; // red for back-do, brown for normal
+  const bottomColor = isBackDoStick ? '#DC2626' : '#5C3A1A';
+
+  // Create D-shape (half-circle) cross-section using THREE.Shape
+  const halfCylinderGeometry = useMemo(() => {
+    const shape = new THREE.Shape();
+    const radius = 0.15;
+    shape.moveTo(-radius, 0);
+    shape.lineTo(radius, 0);
+    shape.absarc(0, 0, radius, 0, Math.PI, false);
+    shape.lineTo(-radius, 0);
+    const geom = new THREE.ExtrudeGeometry(shape, {
+      depth: 1.6,
+      bevelEnabled: false,
+      steps: 1,
+    });
+    geom.translate(0, 0, -0.8);
+    return geom;
+  }, []);
+
+  const endCapGeometry = useMemo(() => {
+    const shape = new THREE.Shape();
+    const radius = 0.15;
+    shape.moveTo(-radius, 0);
+    shape.lineTo(radius, 0);
+    shape.absarc(0, 0, radius, 0, Math.PI, false);
+    shape.lineTo(-radius, 0);
+    return new THREE.ShapeGeometry(shape);
+  }, []);
 
   return (
     <RigidBody
       ref={rigidBodyRef}
       colliders={false}
-      position={[throwParams.startX, 2.0, throwParams.startZ]}
-      restitution={0.2}
+      position={[throwParams.startX, 3.5, throwParams.startZ]}
+      restitution={0.0}
       friction={1.0}
-      linearDamping={0.2}
-      angularDamping={0.5}
+      linearDamping={0.8}
+      angularDamping={1.5}
     >
-      {/* Collider: cuboid for stability */}
-      <CuboidCollider args={[0.15, 0.15, 0.8]} />
+      {/* Collider: matches D-shape, flat bottom prevents 45-degree resting */}
+      <CuboidCollider args={[0.14, 0.075, 0.78]} position={[0, 0.075, 0]} />
 
-      {/* Full cylinder - light colored (represents the round/front/top side) */}
-      <mesh castShadow receiveShadow rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <cylinderGeometry args={[0.15, 0.15, 1.6, 24]} />
-        <meshStandardMaterial color="#E8C887" roughness={0.5} metalness={0.1} />
+      {/* Half-cylinder mesh (light bamboo) - round top */}
+      <mesh castShadow receiveShadow geometry={halfCylinderGeometry}>
+        <meshStandardMaterial color="#E8C887" roughness={0.5} metalness={0.1} side={THREE.DoubleSide} />
       </mesh>
 
-      {/* Flat bottom side - thin colored strip (or red for back-do stick) */}
-      {/* Only visible when stick lands bottom-up, no support bars */}
-      <mesh castShadow receiveShadow position={[0, -0.05, 0]}>
-        <boxGeometry args={[0.26, 0.03, 1.5]} />
+      {/* Flat bottom (brown or red) */}
+      <mesh castShadow receiveShadow position={[0, -0.001, 0]}>
+        <boxGeometry args={[0.3, 0.02, 1.6]} />
         <meshStandardMaterial color={bottomColor} roughness={0.85} metalness={0.0} />
       </mesh>
 
-      {/* Markings on top (round surface) - only cross marks at ends, no side bars */}
+      {/* End caps (D-shape) */}
+      <mesh geometry={endCapGeometry} position={[0, 0, 0.8]}>
+        <meshStandardMaterial color="#D4A856" roughness={0.5} metalness={0.1} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh geometry={endCapGeometry} position={[0, 0, -0.8]} rotation={[0, Math.PI, 0]}>
+        <meshStandardMaterial color="#D4A856" roughness={0.5} metalness={0.1} side={THREE.DoubleSide} />
+      </mesh>
+
+      {/* Markings on top */}
       <mesh position={[0, 0.15, 0.5]} castShadow>
-        <boxGeometry args={[0.15, 0.01, 0.03]} />
+        <boxGeometry args={[0.12, 0.01, 0.03]} />
         <meshStandardMaterial color="#3D2410" roughness={0.7} />
       </mesh>
       <mesh position={[0, 0.15, -0.5]} castShadow>
-        <boxGeometry args={[0.15, 0.01, 0.03]} />
+        <boxGeometry args={[0.12, 0.01, 0.03]} />
         <meshStandardMaterial color="#3D2410" roughness={0.7} />
       </mesh>
     </RigidBody>
@@ -250,7 +308,7 @@ function CameraController({ isThrown, onAnimationDone }: { isThrown: boolean; on
   useFrame(() => {
     if (!isThrown || phase.current === 'done') return;
     const elapsed = (performance.now() - startTime.current) / 1000;
-    const throwPhaseDuration = 2.5;
+    const throwPhaseDuration = 5.0;
     const rotateDuration = 1.0;
 
     if (elapsed < throwPhaseDuration) {
