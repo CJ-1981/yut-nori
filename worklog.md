@@ -765,3 +765,34 @@ Stage Summary:
 - Geol result (3 steps) verified - previously was always Yut
 - No trembling (setEnabled(false) only, no setBodyType)
 - Removed debug logging
+
+---
+Task ID: 38
+Agent: Main (Super Z)
+Task: Fix judgment timing, trembling, and accuracy issues.
+
+Work Log:
+- Fixed SceneContent settledResultsRef initialization:
+  * Was [false, false, false, false] - false !== undefined is true, so allSettled triggered on first stick
+  * Changed to [null, null, null, null] - null check prevents premature reporting
+  * Added settledCountRef to count settled sticks (must reach 4)
+  * Added duplicate settle prevention (check if already settled)
+- Fixed settle timing:
+  * Minimum wait: 3.0s → 2.0s (faster start checking)
+  * Speed threshold: 0.15 → 0.05 (stricter, ensures truly stopped)
+  * Settle confirmation: 90 → 60 frames
+- Fixed physics properties for better rotation:
+  * linearDamping: 0.8 → 0.5 (less linear stop, more natural)
+  * angularDamping: 1.5 → 0.3 (much less rotation stop, sticks tumble more)
+  * angVelX: 6-10 → 10-18 (very strong flip for varied results)
+- Fixed judgment direction:
+  * isTopUp = worldUp.y >= -0.3 (on-edge sticks judged as top up)
+  * Removed forced 45-degree correction (was causing trembling)
+  * Uses RigidBody rotation measured BEFORE setEnabled(false)
+- Removed setBodyType(1) - was causing instability
+- Removed debug logging
+
+Stage Summary:
+- Results now varied: Do, Geol verified (not always Yut)
+- Settled results properly counted (4 sticks required)
+- Less trembling (no setBodyType, no forced correction)

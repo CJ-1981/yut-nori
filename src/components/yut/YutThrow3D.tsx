@@ -19,6 +19,7 @@ interface PhysicsYutStickProps {
 
 function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStickSettled }: PhysicsYutStickProps) {
   const rigidBodyRef = useRef<any>(null);
+  const meshRef = useRef<THREE.Mesh>(null);
   const [hasSettled, setHasSettled] = useState(false);
   const [collisionSoundPlayed, setCollisionSoundPlayed] = useState(false);
   const settleTimerRef = useRef(0);
@@ -37,11 +38,11 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
       startX: gridX * 0.9 + (Math.random() - 0.5) * 0.2,
       startZ: gridZ * 0.9 + (Math.random() - 0.5) * 0.2,
       velX: (Math.random() - 0.5) * 1.5,
-      velY: 5 + Math.random() * 3, // much higher throw
+      velY: 5 + Math.random() * 3,
       velZ: (Math.random() - 0.5) * 1.5,
-      angVelX: 6 + Math.random() * 4, // strong flip
-      angVelY: (Math.random() - 0.5) * 3,
-      angVelZ: (Math.random() - 0.5) * 4,
+      angVelX: 10 + Math.random() * 8, // very strong flip
+      angVelY: (Math.random() - 0.5) * 5,
+      angVelZ: (Math.random() - 0.5) * 6,
     };
   }, []);
 
@@ -100,36 +101,32 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
     }
 
     const elapsed = (performance.now() - throwStartTimeRef.current) / 1000;
-    if (elapsed < 3.0) return;
+    if (elapsed < 2.0) return;
 
-    const isSlowEnough = speed < 0.1 && angSpeed < 0.1;
+    // Each stick must be individually stopped before reporting
+    const isSlowEnough = speed < 0.05 && angSpeed < 0.05;
     const isLowEnough = translation.y < 0.5;
     const isTimeout = elapsed > maxWaitTime;
 
     if ((isSlowEnough && isLowEnough) || isTimeout) {
       settleTimerRef.current += 1;
+      // Wait 60 frames (~1s) of being consistently stopped
       if ((settleTimerRef.current > 60 || isTimeout) && !hasSettledRef.current) {
         // Mark settled FIRST to prevent any re-entry
         hasSettledRef.current = true;
 
-        // Measure orientation BEFORE any modification
+        // Measure orientation using RigidBody rotation BEFORE disabling
         const rot = rb.rotation();
         const rbQuat = new THREE.Quaternion(rot.x, rot.y, rot.z, rot.w);
-        const roundTopDirInBody = new THREE.Vector3(0, 1, 0);
-        const worldRoundTopDir = roundTopDirInBody.clone().applyQuaternion(rbQuat);
+        const localUp = new THREE.Vector3(0, 1, 0);
+        const worldUp = localUp.applyQuaternion(rbQuat);
+        // D-shape round top is at +Y in local space
+        // y > 0 = round top up, y < 0 = flat bottom up
+        // |y| < 0.3 = on edge, judge as top up (favorable)
+        const isTopUp = worldUp.y >= -0.3;
 
-        // Determine top/bottom based on actual orientation
-        // ExtrudeGeometry D-shape: round part faces -Y in local space
-        // So y < 0 = round top is up (light side visible), y > 0 = flat bottom is up
-        const isTopUp = worldRoundTopDir.y <= 0;
-
-        // Correct only if severely tilted (on edge, |y| < 0.5)
-        if (Math.abs(worldRoundTopDir.y) < 0.5) {
-          const euler = new THREE.Euler().setFromQuaternion(rbQuat);
-          const targetEuler = new THREE.Euler(isTopUp ? 0 : Math.PI, euler.y, 0);
-          const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
-          rb.setRotation({ x: targetQuat.x, y: targetQuat.y, z: targetQuat.z, w: targetQuat.w }, true);
-        }
+        // No forced correction - let physics determine final orientation
+        // The D-shape collider naturally prevents stable 45-degree resting
 
         // Report result using measured value (before any correction side effects)
         if (!settledReportedRef.current) {
@@ -194,14 +191,14 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
       position={[throwParams.startX, 3.5, throwParams.startZ]}
       restitution={0.0}
       friction={1.0}
-      linearDamping={0.8}
-      angularDamping={1.5}
+      linearDamping={0.5}
+      angularDamping={0.3}
     >
       {/* Collider: matches D-shape, flat bottom prevents 45-degree resting */}
       <CuboidCollider args={[0.14, 0.075, 0.78]} position={[0, 0.075, 0]} />
 
       {/* Half-cylinder mesh (light bamboo) - round top */}
-      <mesh castShadow receiveShadow geometry={halfCylinderGeometry}>
+      <mesh ref={meshRef} castShadow receiveShadow geometry={halfCylinderGeometry}>
         <meshStandardMaterial color="#E8C887" roughness={0.5} metalness={0.1} side={THREE.DoubleSide} />
       </mesh>
 
@@ -395,25 +392,28 @@ export function YutThrow3D({ isThrown, throwResult, onAnimationEnd, onUserIntera
 
 function SceneContent({ isThrown, throwResult, onAnimationEnd, onUserInteraction, onActualResult }: YutThrow3DProps) {
   const [cameraAnimationDone, setCameraAnimationDone] = useState(false);
-  const settledResultsRef = useRef<boolean[]>([false, false, false, false]);
+  // Use null for "not yet settled" - MUST be null, not false!
+  const settledResultsRef = useRef<(boolean | null)[]>([null, null, null, null]);
   const reportedRef = useRef(false);
+  const settledCountRef = useRef(0);
 
   const handleStickSettled = (index: number, isTopUp: boolean) => {
+    if (settledResultsRef.current[index] !== null) return; // already settled
     settledResultsRef.current[index] = isTopUp;
-    // Check if all 4 sticks have settled
-    const allSettled = settledResultsRef.current.every((v) => v !== undefined);
-    if (allSettled && !reportedRef.current) {
+    settledCountRef.current += 1;
+    // Check if ALL 4 sticks have settled
+    if (settledCountRef.current >= 4 && !reportedRef.current) {
       reportedRef.current = true;
-      // Report actual measured results
-      onActualResult?.([...settledResultsRef.current]);
+      onActualResult?.(settledResultsRef.current.map((v) => v === true));
     }
   };
 
   // Reset on new throw
   useEffect(() => {
     if (isThrown) {
-      settledResultsRef.current = [false, false, false, false];
+      settledResultsRef.current = [null, null, null, null];
       reportedRef.current = false;
+      settledCountRef.current = 0;
     }
   }, [isThrown]);
 
