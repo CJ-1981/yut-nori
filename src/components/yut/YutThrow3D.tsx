@@ -102,44 +102,47 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
     const elapsed = (performance.now() - throwStartTimeRef.current) / 1000;
     if (elapsed < 3.0) return;
 
-    const isSlowEnough = speed < 0.15 && angSpeed < 0.15;
+    const isSlowEnough = speed < 0.1 && angSpeed < 0.1;
     const isLowEnough = translation.y < 0.5;
     const isTimeout = elapsed > maxWaitTime;
 
     if ((isSlowEnough && isLowEnough) || isTimeout) {
       settleTimerRef.current += 1;
-      if ((settleTimerRef.current > 90 || isTimeout) && !hasSettledRef.current) {
+      if ((settleTimerRef.current > 60 || isTimeout) && !hasSettledRef.current) {
+        // Mark settled FIRST to prevent any re-entry
+        hasSettledRef.current = true;
+
+        // Measure orientation BEFORE any modification
         const rot = rb.rotation();
         const rbQuat = new THREE.Quaternion(rot.x, rot.y, rot.z, rot.w);
         const roundTopDirInBody = new THREE.Vector3(0, 1, 0);
         const worldRoundTopDir = roundTopDirInBody.clone().applyQuaternion(rbQuat);
 
-        // Only correct if tilted more than 45 degrees (|y| < 0.7)
-        if (Math.abs(worldRoundTopDir.y) < 0.7) {
-          const isTopUp = worldRoundTopDir.y >= 0;
+        // Determine top/bottom based on actual orientation
+        // ExtrudeGeometry D-shape: round part faces -Y in local space
+        // So y < 0 = round top is up (light side visible), y > 0 = flat bottom is up
+        const isTopUp = worldRoundTopDir.y <= 0;
+
+        // Correct only if severely tilted (on edge, |y| < 0.5)
+        if (Math.abs(worldRoundTopDir.y) < 0.5) {
           const euler = new THREE.Euler().setFromQuaternion(rbQuat);
           const targetEuler = new THREE.Euler(isTopUp ? 0 : Math.PI, euler.y, 0);
           const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
           rb.setRotation({ x: targetQuat.x, y: targetQuat.y, z: targetQuat.z, w: targetQuat.w }, true);
         }
 
+        // Report result using measured value (before any correction side effects)
+        if (!settledReportedRef.current) {
+          settledReportedRef.current = true;
+          onStickSettled?.(index, isTopUp);
+        }
+
+        // Stop physics AFTER reporting
         rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
         rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
         rb.setEnabled(false);
-        rb.setBodyType(1, true);
 
-        hasSettledRef.current = true;
         setHasSettled(true);
-
-        const finalRot = rb.rotation();
-        const finalQuat = new THREE.Quaternion(finalRot.x, finalRot.y, finalRot.z, finalRot.w);
-        const finalWorldUp = roundTopDirInBody.clone().applyQuaternion(finalQuat);
-        const finalIsTopUp = finalWorldUp.y >= -0.3;
-
-        if (!settledReportedRef.current) {
-          settledReportedRef.current = true;
-          onStickSettled?.(index, finalIsTopUp);
-        }
 
         if (!endCalledRef.current) {
           endCalledRef.current = true;
@@ -156,11 +159,13 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
   const bottomColor = isBackDoStick ? '#DC2626' : '#5C3A1A';
 
   // Create D-shape (half-circle) cross-section using THREE.Shape
+  // Arc from 0 to PI with clockwise=false goes counter-clockwise: +X → +Y → -X (top half)
   const halfCylinderGeometry = useMemo(() => {
     const shape = new THREE.Shape();
     const radius = 0.15;
     shape.moveTo(-radius, 0);
     shape.lineTo(radius, 0);
+    // absarc(0, 0, r, 0, PI, false): 0→PI counter-clockwise = +X → +Y → -X (top half)
     shape.absarc(0, 0, radius, 0, Math.PI, false);
     shape.lineTo(-radius, 0);
     const geom = new THREE.ExtrudeGeometry(shape, {

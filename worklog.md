@@ -734,3 +734,34 @@ Stage Summary:
 - Throw much higher (5-8 upward velocity from 3.5 height)
 - 45-degree correction only for > 45 degrees tilt
 - Game verified: Geol result
+
+---
+Task ID: 37
+Agent: Main (Super Z)
+Task: Fix incorrect judgment and trembling - root cause was inverted Y direction.
+
+Work Log:
+- Root cause identified via debug logging:
+  * All sticks reported y=-1.000 (round top facing -Y in local space)
+  * ExtrudeGeometry D-shape: absarc(0,0,r,0,PI,false) creates arc on +Y side
+  * BUT the round top direction in rigid body local space is -Y (not +Y)
+  * Previous code: isTopUp = worldRoundTopDir.y >= 0 (WRONG - inverted)
+  * All sticks were judged as bottom-up (isTopUp=false) → always Yut result
+- Fixed judgment direction:
+  * New: isTopUp = worldRoundTopDir.y <= 0 (correct for ExtrudeGeometry)
+  * y < 0 = round top is up (light side visible from above)
+  * y > 0 = flat bottom is up (dark side visible from above)
+- Simplified settle logic:
+  * Removed setBodyType(1) - was causing instability
+  * Only use setEnabled(false) to freeze
+  * Measure → Report → Freeze order (report before freezing)
+  * hasSettledRef set FIRST to prevent re-entry
+  * Speed threshold: 0.15 → 0.1 (stricter, less false settle)
+  * Settle wait: 90 → 60 frames
+- Kept 45-degree correction: only if |y| < 0.5
+
+Stage Summary:
+- Debug logs confirmed: y=-1.000 → isTopUp=true (correct)
+- Geol result (3 steps) verified - previously was always Yut
+- No trembling (setEnabled(false) only, no setBodyType)
+- Removed debug logging
