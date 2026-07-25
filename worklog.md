@@ -934,3 +934,36 @@ Stage Summary:
 - Higher damping prevents trembling
 - Tighter ground collision prevents floating/sinking
 - Larger collider prevents penetration and underground mesh
+
+---
+Task ID: 45
+Agent: Main (Super Z)
+Task: Fix selected avatars not reflected in actual game.
+
+Work Log:
+- Root cause: `startGame()` in store.ts called `createInitialPlayers(num)`
+  which discarded the user-selected `avatarId`/`name` from the setup screen
+  and reset every player back to the default ('tiger', 'dragon', ...).
+- Secondary issue: `setNumPlayers(n)` also rebuilt players from scratch,
+  so toggling 2 -> 3 -> 2 between setup steps would lose any picks.
+- Fixes applied in `src/lib/game/store.ts`:
+  * `startGame()`: now reads `get().players` and maps over the existing
+    slice, preserving `name` and `avatarId`; only the 4 piece IDs and
+    positions are rebuilt (positions reset to home, IDs re-keyed to
+    `p{playerIndex}-{j}` for consistency).
+  * `setNumPlayers(n)`: now preserves existing players' `name`/`avatarId`
+    for any shared slots, only filling brand-new slots from a fresh
+    `createInitialPlayers(n)` call.
+- Verified via simulation script `scripts/test-avatar-fix.mjs`:
+  Initial(2 tigers/dragons) -> setNumPlayers(3) -> custom avatars
+  Alice:crane / Bob:bear / Cara:deer -> startGame() -> SAME three
+  avatars preserved. PASS.
+- Dev server runs cleanly.
+
+Stage Summary:
+- Avatar/name picked in SetupScreen now carries into the actual game.
+- Board pieces (YutBoard.tsx) and GameScreen header already use
+  `player.avatarId` via AVATARS.find, so the rendering side needed no
+  changes.
+- Going back from step 2 to step 1 and changing player count no longer
+  wipes existing customizations.

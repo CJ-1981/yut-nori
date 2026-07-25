@@ -110,7 +110,27 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setBackDoAdvantage: (backDoAdvantage) => set({ backDoAdvantage }),
 
   setNumPlayers: (n) => {
-    const players = createInitialPlayers(n);
+    // Preserve existing player customizations (avatar, name) where possible,
+    // and only create new players for any extra slots.
+    const existing = get().players;
+    const fresh = createInitialPlayers(n);
+    const players = Array.from({ length: n }, (_, i) => {
+      const prev = existing[i];
+      if (prev) {
+        // Keep user-selected avatar/name, just reset pieces (in case of restart)
+        return {
+          ...prev,
+          pieces: Array.from({ length: 4 }, (_, j) => ({
+            id: `p${i}-${j}`,
+            playerId: i,
+            position: -1, // home
+            carrying: [],
+          })),
+        };
+      }
+      // New slot - use default from freshly created player
+      return fresh[i];
+    });
     set({ numPlayers: n, players });
   },
 
@@ -121,7 +141,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   startGame: () => {
     const num = get().numPlayers;
-    const players = createInitialPlayers(num);
+    const existingPlayers = get().players;
+    // Preserve user-selected name/avatar from setup; only reset game-state fields.
+    const players = existingPlayers.slice(0, num).map((p, i) => ({
+      ...p,
+      id: i,
+      // Always rebuild pieces so IDs match the (possibly new) player index
+      // and positions are reset to home.
+      pieces: Array.from({ length: 4 }, (_, j) => ({
+        id: `p${i}-${j}`,
+        playerId: i,
+        position: -1, // home
+        carrying: [],
+      })),
+    }));
     set({
       phase: 'playing',
       players,
