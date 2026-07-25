@@ -101,50 +101,46 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
     }
 
     const elapsed = (performance.now() - throwStartTimeRef.current) / 1000;
-    if (elapsed < 1.5) return; // shorter wait with higher gravity
+    if (elapsed < 1.5) return;
 
     const isSlowEnough = speed < 0.1 && angSpeed < 0.1;
-    const isLowEnough = translation.y < 0.5;
+    // Only accept sticks near ground level (not stacked on other sticks)
+    const isLowEnough = translation.y < 0.2;
     const isTimeout = elapsed > maxWaitTime;
 
     if ((isSlowEnough && isLowEnough) || isTimeout) {
       settleTimerRef.current += 1;
       if ((settleTimerRef.current > 45 || isTimeout) && !hasSettledRef.current) {
-        // Mark settled FIRST to prevent any re-entry
         hasSettledRef.current = true;
 
-        // Measure orientation using RigidBody rotation BEFORE disabling
+        // If stick is floating (stacked on another), force it to ground
+        if (translation.y > 0.2) {
+          rb.setTranslation({ x: translation.x, y: 0.08, z: translation.z }, true);
+        }
+
         const rot = rb.rotation();
         const rbQuat = new THREE.Quaternion(rot.x, rot.y, rot.z, rot.w);
         const localUp = new THREE.Vector3(0, 1, 0);
         const worldUp = localUp.applyQuaternion(rbQuat);
-          // Measure orientation
-        // y > 0.7 = clearly round top up (light side)
-        // y < -0.7 = clearly flat bottom up (dark side)
-        // |y| < 0.7 = tilted/on side → FORCE FLAT: snap to nearest stable orientation
+
         let isTopUp: boolean;
         if (worldUp.y > 0.7) {
           isTopUp = true;
         } else if (worldUp.y < -0.7) {
           isTopUp = false;
         } else {
-          // Stick is tilted/on side - physically impossible for D-shape
-          // Force to nearest flat orientation based on current tilt direction
           isTopUp = worldUp.y >= 0;
-          // Apply correction: snap rotation to flat
           const euler = new THREE.Euler().setFromQuaternion(rbQuat);
           const targetEuler = new THREE.Euler(isTopUp ? 0 : Math.PI, euler.y, 0);
           const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
           rb.setRotation({ x: targetQuat.x, y: targetQuat.y, z: targetQuat.z, w: targetQuat.w }, true);
         }
 
-        // Report result using measured value (before any correction side effects)
         if (!settledReportedRef.current) {
           settledReportedRef.current = true;
           onStickSettled?.(index, isTopUp);
         }
 
-        // Stop physics AFTER reporting
         rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
         rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
         rb.setEnabled(false);

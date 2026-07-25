@@ -869,3 +869,24 @@ Stage Summary:
 - Sticks can no longer remain standing on side/edge
 - Forced correction snaps to nearest flat orientation
 - Results verified: Geol (multiple throws)
+
+---
+Task ID: 42
+Agent: Main (Super Z)
+Task: Fix sticks floating in air (stacked on other sticks).
+
+Work Log:
+- Lowered isLowEnough threshold: 0.5 → 0.2
+  * Only sticks near ground level (y < 0.2) are accepted as settled
+  * Sticks stacked on other sticks (y ~ 0.3-0.4) are NOT accepted
+  * They must slide off and reach ground before settling
+- Added force-to-ground for timeout cases:
+  * If timeout occurs and stick is still floating (y > 0.2)
+  * Force translation to y = 0.08 (ground level)
+  * Prevents sticks remaining in air indefinitely
+
+Stage Summary:
+- VLM verified: ALL sticks on ground (not floating)
+- All sticks lying flat
+- No sticks stacked on each other
+- Geol result correct
