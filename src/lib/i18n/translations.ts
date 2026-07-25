@@ -64,6 +64,8 @@ export type TranslationKey =
   | 'turnTime'
   | 'gameTime'
   | 'lastThrow'
+  | 'override'
+  | 'overrideResult'
   | 'pieces'
   | 'home'
   | 'onBoard'
@@ -184,6 +186,8 @@ export const translations: Record<Language, TranslationDict> = {
     turnTime: 'Turn',
     gameTime: 'Game Time',
     lastThrow: 'Last Throw',
+    override: 'Override',
+    overrideResult: 'Change Result',
     pieces: 'Pieces',
     home: 'Home',
     onBoard: 'Board',
@@ -297,6 +301,8 @@ export const translations: Record<Language, TranslationDict> = {
     turnTime: '차례',
     gameTime: '게임 시간',
     lastThrow: '마지막 윷',
+    override: '번복',
+    overrideResult: '결과 변경',
     pieces: '말',
     home: '대기',
     onBoard: '판 위',
@@ -410,6 +416,8 @@ export const translations: Record<Language, TranslationDict> = {
     turnTime: 'ターン',
     gameTime: 'ゲーム時間',
     lastThrow: '最後の投擲',
+    override: '取り消し',
+    overrideResult: '結果変更',
     pieces: 'コマ',
     home: '待機',
     onBoard: '盤上',
@@ -523,6 +531,8 @@ export const translations: Record<Language, TranslationDict> = {
     turnTime: '回合',
     gameTime: '游戏时间',
     lastThrow: '上次掷柶',
+    override: '撤销',
+    overrideResult: '更改结果',
     pieces: '棋子',
     home: '待机',
     onBoard: '盘上',

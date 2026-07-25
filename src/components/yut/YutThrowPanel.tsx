@@ -43,7 +43,27 @@ export function YutThrowPanel() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
-  const [userInteracting, setUserInteracting] = useState(false); // user controlling camera
+  const [userInteracting, setUserInteracting] = useState(false);
+  const [showOverride, setShowOverride] = useState(false);
+
+  const overrideOptions: YutThrow['result'][] = ['do', 'gae', 'geol', 'yut', 'mo', 'back-do'];
+
+  const handleOverride = (newResult: YutThrow['result']) => {
+    if (!displayResult) return;
+    const stepsMap: Record<string, number> = { 'do': 1, 'gae': 2, 'geol': 3, 'yut': 4, 'mo': 5, 'back-do': -1 };
+    const extraTurnMap: Record<string, boolean> = { 'yut': true, 'mo': true, 'do': false, 'gae': false, 'geol': false, 'back-do': false };
+    const updated: YutThrow = {
+      result: newResult,
+      sticks: displayResult.sticks,
+      steps: stepsMap[newResult],
+      extraTurn: extraTurnMap[newResult],
+      backDoIndex: newResult === 'back-do' ? displayResult.backDoIndex : undefined,
+    };
+    setDisplayResult(updated);
+    setYutResult(updated);
+    setShowOverride(false);
+    soundManager.play(newResult.replace('-', '') as any);
+  };
 
   const player = players[currentPlayerIndex];
   const playerColor = PLAYER_COLORS_LOCAL[currentPlayerIndex];
@@ -89,33 +109,25 @@ export function YutThrowPanel() {
   };
 
   // Handle actual measured result from physics simulation
-  // Recalculate the yut result based on actual stick orientations
   const handleActualResult = (actualSticks: boolean[]) => {
     if (!displayResult) return;
 
-    // Count top faces (light side up = true)
     const topCount = actualSticks.filter((s) => s).length;
-
-    // Check for back-do: 3 top faces + 1 bottom (red) face
-    // The backDoIndex from original result indicates which stick has red bottom
     const originalBackDoIndex = displayResult.backDoIndex;
     let isBackDo = false;
     if (topCount === 3 && originalBackDoIndex !== undefined) {
-      // The one bottom-up stick should be the red-bottomed one
       const bottomUpIndex = actualSticks.indexOf(false);
       if (bottomUpIndex === originalBackDoIndex) {
         isBackDo = true;
       }
     }
 
-    // Determine result based on actual top count
     let result: YutThrow['result'];
     let steps: number;
     let extraTurn = false;
 
     if (isBackDo) {
-      result = 'back-do';
-      steps = -1;
+      result = 'back-do'; steps = -1;
     } else {
       switch (topCount) {
         case 4: result = 'mo'; steps = 5; extraTurn = true; break;
@@ -126,18 +138,21 @@ export function YutThrowPanel() {
       }
     }
 
-    // Only update if result changed from original
-    if (result !== displayResult.result) {
-      const updatedResult: YutThrow = {
-        result,
-        sticks: actualSticks,
-        steps,
-        extraTurn,
-        backDoIndex: isBackDo ? originalBackDoIndex : undefined,
-      };
-      setDisplayResult(updatedResult);
-      setYutResult(updatedResult);
-    }
+    const finalResult: YutThrow = {
+      result,
+      sticks: actualSticks,
+      steps,
+      extraTurn,
+      backDoIndex: isBackDo ? originalBackDoIndex : undefined,
+    };
+    setDisplayResult(finalResult);
+    setYutResult(finalResult);
+
+    setTimeout(() => {
+      soundManager.play(result.replace('-', '') as any);
+      setShowResult(true);
+      setTimeout(() => setShowContinue(true), 600);
+    }, 800);
   };
 
   // Auto-continue after a delay if user doesn't click
@@ -227,12 +242,40 @@ export function YutThrowPanel() {
                   👆 Drag to rotate camera · Pinch to zoom
                 </div>
                 {showContinue && (
-                  <button
-                    onClick={handleContinue}
-                    className="pointer-events-auto px-8 py-3 rounded-xl bg-stone-800 text-white font-bold shadow-lg hover:scale-105 active:scale-95 transition animate-[bounce_0.5s_ease-out]"
-                  >
-                    {t('confirm')} →
-                  </button>
+                  <div className="flex gap-3 pointer-events-auto">
+                    <button
+                      onClick={handleContinue}
+                      className="px-8 py-3 rounded-xl bg-stone-800 text-white font-bold shadow-lg hover:scale-105 active:scale-95 transition animate-[bounce_0.5s_ease-out]"
+                    >
+                      {t('confirm')} →
+                    </button>
+                    <button
+                      onClick={() => setShowOverride(!showOverride)}
+                      className="px-6 py-3 rounded-xl bg-amber-500 text-white font-bold shadow-lg hover:scale-105 active:scale-95 transition"
+                    >
+                      ↩ {t('override')}
+                    </button>
+                  </div>
+                )}
+                {showOverride && (
+                  <div className="pointer-events-auto bg-white rounded-2xl p-4 shadow-2xl border-2 border-amber-300 flex flex-col gap-2">
+                    <div className="text-sm font-bold text-stone-700 mb-1">{t('overrideResult')}</div>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {overrideOptions.map((opt) => (
+                        <button
+                          key={opt}
+                          onClick={() => handleOverride(opt)}
+                          className={`px-4 py-2 rounded-lg font-bold text-sm transition ${
+                            displayResult?.result === opt
+                              ? 'bg-stone-800 text-white'
+                              : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                          }`}
+                        >
+                          {t(getYutLabelKey(opt) as any)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
             )}

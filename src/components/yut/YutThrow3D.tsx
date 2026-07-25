@@ -28,7 +28,7 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
   const settledReportedRef = useRef(false);
   const hasSettledRef = useRef(false);
   const throwStartTimeRef = useRef(0);
-  const maxWaitTime = 10.0;
+  const maxWaitTime = 7.0;
 
   // Random initial throw parameters per stick - spread out starting positions
   const throwParams = useMemo(() => {
@@ -40,9 +40,9 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
       velX: (Math.random() - 0.5) * 1.5,
       velY: 5 + Math.random() * 3,
       velZ: (Math.random() - 0.5) * 1.5,
-      angVelX: 10 + Math.random() * 8, // very strong flip
-      angVelY: (Math.random() - 0.5) * 5,
-      angVelZ: (Math.random() - 0.5) * 6,
+      angVelX: 8 + Math.random() * 6,
+      angVelY: (Math.random() - 0.5) * 4,
+      angVelZ: (Math.random() - 0.5) * 5,
     };
   }, []);
 
@@ -101,17 +101,15 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
     }
 
     const elapsed = (performance.now() - throwStartTimeRef.current) / 1000;
-    if (elapsed < 2.0) return;
+    if (elapsed < 1.5) return; // shorter wait with higher gravity
 
-    // Each stick must be individually stopped before reporting
-    const isSlowEnough = speed < 0.05 && angSpeed < 0.05;
+    const isSlowEnough = speed < 0.1 && angSpeed < 0.1;
     const isLowEnough = translation.y < 0.5;
     const isTimeout = elapsed > maxWaitTime;
 
     if ((isSlowEnough && isLowEnough) || isTimeout) {
       settleTimerRef.current += 1;
-      // Wait 60 frames (~1s) of being consistently stopped
-      if ((settleTimerRef.current > 60 || isTimeout) && !hasSettledRef.current) {
+      if ((settleTimerRef.current > 45 || isTimeout) && !hasSettledRef.current) {
         // Mark settled FIRST to prevent any re-entry
         hasSettledRef.current = true;
 
@@ -120,10 +118,11 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
         const rbQuat = new THREE.Quaternion(rot.x, rot.y, rot.z, rot.w);
         const localUp = new THREE.Vector3(0, 1, 0);
         const worldUp = localUp.applyQuaternion(rbQuat);
-        // D-shape round top is at +Y in local space
-        // y > 0 = round top up, y < 0 = flat bottom up
-        // |y| < 0.3 = on edge, judge as top up (favorable)
-        const isTopUp = worldUp.y >= -0.3;
+        // Measure: round top direction is +Y in local space
+        // y > 0 = round top up (light side) = isTopUp = true
+        // y < 0 = flat bottom up (dark side) = isTopUp = false
+        // |y| < 0.5 = tilted/on edge, judge based on sign (y >= 0 = top)
+        const isTopUp = worldUp.y >= 0;
 
         // No forced correction - let physics determine final orientation
         // The D-shape collider naturally prevents stable 45-degree resting
@@ -159,7 +158,7 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
   const halfCylinderGeometry = useMemo(() => {
     const shape = new THREE.Shape();
     const halfWidth = 0.15;
-    const halfHeight = 0.1;
+    const halfHeight = 0.15;
     shape.moveTo(-halfWidth, 0);
     shape.lineTo(halfWidth, 0);
     shape.bezierCurveTo(halfWidth, halfHeight * 0.55, halfWidth * 0.55, halfHeight, 0, halfHeight);
@@ -174,12 +173,9 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
     const pos = geom.attributes.position;
     const uv = geom.attributes.uv;
     for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i);
       const y = pos.getY(i);
       const z = pos.getZ(i);
-      // U: along length (z from -0.8 to 0.8 → 0 to 1)
       const u = (z + 0.8) / 1.6;
-      // V: 0 at bottom (y=0), 1 at top (y=halfHeight)
       const v = Math.max(0, Math.min(1, y / halfHeight));
       uv.setXY(i, u, v);
     }
@@ -213,7 +209,7 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
   const endCapGeometry = useMemo(() => {
     const shape = new THREE.Shape();
     const halfWidth = 0.15;
-    const halfHeight = 0.1;
+    const halfHeight = 0.15;
     shape.moveTo(-halfWidth, 0);
     shape.lineTo(halfWidth, 0);
     shape.bezierCurveTo(halfWidth, halfHeight * 0.55, halfWidth * 0.55, halfHeight, 0, halfHeight);
@@ -228,11 +224,11 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
       position={[throwParams.startX, 3.5, throwParams.startZ]}
       restitution={0.0}
       friction={1.0}
-      linearDamping={0.5}
-      angularDamping={0.3}
+      linearDamping={0.8}
+      angularDamping={0.8}
     >
       {/* Collider: matches half-ellipse shape */}
-      <CuboidCollider args={[0.14, 0.05, 0.78]} position={[0, 0.05, 0]} />
+      <CuboidCollider args={[0.14, 0.075, 0.78]} position={[0, 0.075, 0]} />
 
       {/* Half-ellipse mesh with texture (light bamboo + markings) */}
       <mesh ref={meshRef} castShadow receiveShadow geometry={halfCylinderGeometry}>
@@ -259,8 +255,8 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
 // Ground plane
 function PhysicsGround() {
   return (
-    <RigidBody type="fixed" colliders={false} friction={0.8} restitution={0.2}>
-      <CuboidCollider args={[4, 0.01, 4]} position={[0, -0.02, 0]} />
+    <RigidBody type="fixed" colliders={false} friction={1.0} restitution={0.0}>
+      <CuboidCollider args={[4, 0.5, 4]} position={[0, -0.5, 0]} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[8, 8]} />
         <meshStandardMaterial color="#FAFAF7" roughness={0.9} metalness={0.0} />
@@ -337,7 +333,7 @@ function CameraController({ isThrown, onAnimationDone }: { isThrown: boolean; on
   useFrame(() => {
     if (!isThrown || phase.current === 'done') return;
     const elapsed = (performance.now() - startTime.current) / 1000;
-    const throwPhaseDuration = 5.0;
+    const throwPhaseDuration = 3.0;
     const rotateDuration = 1.0;
 
     if (elapsed < throwPhaseDuration) {
@@ -451,7 +447,7 @@ function SceneContent({ isThrown, throwResult, onAnimationEnd, onUserInteraction
         onAnimationDone={() => setCameraAnimationDone(true)}
       />
       <InteractiveControls enabled={cameraAnimationDone} onUserInteraction={onUserInteraction} />
-      <Physics gravity={[0, -9.81, 0]} timeStep="vary">
+      <Physics gravity={[0, -20, 0]} timeStep="vary">
         <PhysicsGround />
         <PhysicsWalls />
         {[0, 1, 2, 3].map((i) => (
