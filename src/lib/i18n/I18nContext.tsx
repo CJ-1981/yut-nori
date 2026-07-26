@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { Language, translations, TranslationKey } from './translations';
 
 interface I18nContextValue {
@@ -13,21 +13,25 @@ const I18nContext = createContext<I18nContextValue | null>(null);
 
 const STORAGE_KEY = 'yutnori-lang';
 
-function getInitialLang(): Language {
-  if (typeof window === 'undefined') return 'en';
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved && ['en', 'ko', 'ja', 'zh'].includes(saved)) {
-      return saved as Language;
-    }
-  } catch {
-    // ignore
-  }
-  return 'en';
-}
+// Always render the same language on the server AND during the first client
+// render to avoid React hydration mismatches. The saved language (if any) is
+// applied in a useEffect AFTER hydration completes.
+const SSR_DEFAULT_LANG: Language = 'en';
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = useState<Language>(getInitialLang);
+  const [lang, setLangState] = useState<Language>(SSR_DEFAULT_LANG);
+
+  // After hydration, sync from localStorage.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved && ['en', 'ko', 'ja', 'zh'].includes(saved)) {
+        setLangState(saved as Language);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const setLang = useCallback((l: Language) => {
     setLangState(l);

@@ -1081,3 +1081,43 @@ Stage Summary:
 - Center is now a 4-way junction for BR diagonal access.
 - BL corner can no longer take the diagonal shortcut to center;
   the TR→BL one-way diagonal is now a permanent rule.
+
+---
+Task ID: 48
+Agent: Main (Super Z)
+Task: Fix React hydration mismatch on initial page load.
+
+Work Log:
+- Root cause: `I18nProvider` used `useState<Language>(getInitialLang)`
+  where `getInitialLang()` returned 'en' on server but read from
+  localStorage on the client. So SSR produced English ("Yut Nori",
+  English button highlighted) while the first client render produced
+  Korean ("윷놀이", Korean button highlighted) when a saved language
+  existed. React detected the diff and threw hydration error.
+
+- Fix in `src/lib/i18n/I18nContext.tsx`:
+  * Always initialize `lang` state to `SSR_DEFAULT_LANG` ('en'),
+    so server HTML and first client render match exactly.
+  * Move localStorage read into a `useEffect` (runs AFTER hydration)
+    that calls `setLangState(saved)` if a valid saved language exists.
+  * Removed the old `getInitialLang` helper.
+- Trade-off: brief English flash before switching to saved language.
+  This is the standard SSR-safe pattern and is much better than
+  hydration errors / full re-render.
+
+- Other client-only patterns audited:
+  * `YutThrowPanel.tsx` line 191 uses `typeof window !== 'undefined'`
+    for touch-device detection, but this component only mounts after
+    the user starts a game (client-only state transition, no SSR
+    involved), so it is NOT a hydration risk. Left as-is.
+
+- Verified:
+  * Server returns stable HTML: "Yut Nori" with English highlighted.
+  * `npx tsc --noEmit` clean for I18nContext and MainMenu.
+  * Dev server HTTP 200, no errors in log.
+
+Stage Summary:
+- Hydration mismatch error gone.
+- Language still persists across reloads via localStorage.
+- First paint is always English; saved language applies on the next
+  tick via useEffect.
