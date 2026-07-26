@@ -155,14 +155,26 @@ export function getPossibleMoves(
   const absSteps = Math.abs(steps);
 
   // Two paths to consider if at a corner with outer path going forward
-  // EXCEPTION: Start position (0) cannot take diagonal - must go outer
+  // EXCEPTION 1: Start position (0) cannot take diagonal - must go outer
+  // EXCEPTION 2: Bottom-left corner (15) cannot take diagonal - one-way TR→BL only
   const isAtCorner = CORNER_POSITIONS.includes(startPos);
   const isStartCorner = startPos === 0;
-  const canTakeDiagonal = isAtCorner && !isStartCorner && startPath === 'outer' && !goingBackward;
+  const isBlockedCorner = startPos === 15; // BL corner: no diagonal entry
+  const canTakeDiagonal = isAtCorner && !isStartCorner && !isBlockedCorner && startPath === 'outer' && !goingBackward;
 
-  const paths: PathType[] = canTakeDiagonal
-    ? [startPath, DIAGONAL_ENTRY[startPos]]
-    : [startPath];
+  // At center, allow branching onto the d10 path (which goes toward BR corner 0)
+  // This lets pieces that entered via d5/d15/d0 also exit toward bottom-right.
+  const isAtCenter = startPos === CENTER_POSITION;
+  const canBranchToBRDiagonal = isAtCenter && !goingBackward && startPath !== 'outer' && startPath !== 'd10';
+
+  let paths: PathType[];
+  if (canTakeDiagonal) {
+    paths = [startPath, DIAGONAL_ENTRY[startPos]];
+  } else if (canBranchToBRDiagonal) {
+    paths = [startPath, 'd10'];
+  } else {
+    paths = [startPath];
+  }
 
   const options: MoveOption[] = [];
 

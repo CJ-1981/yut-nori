@@ -1012,3 +1012,72 @@ Total timing breakdown now:
   - Result banner reveal:  0.25s
   - Continue button:       +0.25s
   Typical total:           ~2.5-3.0s
+
+---
+Task ID: 47
+Agent: Main (Super Z)
+Task: 3 board/UX changes:
+  1. Click selected piece again to move it
+  2. Allow center → bottom-right diagonal movement
+  3. Prevent bottom-left corner → center movement
+
+Work Log:
+
+Change 1 - `src/components/yut/YutBoard.tsx`:
+- Replaced the piece click/touch toggle (selectPiece(id===selected?null:id))
+  with explicit branch logic:
+    * If piece is NOT currently selected → selectPiece(piece.id)
+    * If piece IS selected AND possibleMoves.length > 0 → execute first
+      possible move via onPositionClick(possibleMoves[0].position)
+    * If piece IS selected AND no possible moves → selectPiece(null)
+- Same handler mirrored in onClick and onTouchStart.
+- Visual cursor / pointerEvents unchanged: still only current-player,
+  non-carried, non-home pieces are interactive.
+
+Change 2 - `src/lib/game/board.ts` getPossibleMoves():
+- Added "center branch" rule: when a piece is at position 20 (CENTER)
+  on a non-outer, non-d10 diagonal path (i.e. d0, d5, or d15), the
+  player may choose to branch onto the d10 path (which goes
+  20 → 22 → 21 → 0 = toward bottom-right corner).
+- Implemented as:
+    const isAtCenter = startPos === CENTER_POSITION;
+    const canBranchToBRDiagonal = isAtCenter
+      && !goingBackward
+      && startPath !== 'outer'
+      && startPath !== 'd10';
+  When canBranchToBRDiagonal, paths = [startPath, 'd10'].
+- Pieces already on d10 (came from TL corner) already go to BR; no
+  need to add the option twice.
+- Pieces on d0 (came from BR) gain the option to "reverse" back to
+  BR via d10 — explicitly requested by user.
+
+Change 3 - `src/lib/game/board.ts` getPossibleMoves():
+- Blocked diagonal entry at the bottom-left corner (position 15):
+    const isBlockedCorner = startPos === 15;
+    const canTakeDiagonal = isAtCorner && !isStartCorner
+      && !isBlockedCorner && startPath === 'outer' && !goingBackward;
+- Effect: the TR↔BL diagonal becomes one-way (TR→BL via d5 still
+  allowed; BL→TR via d15 disabled). Pieces arriving at BL corner
+  must continue along the outer ring.
+- The other 3 corners (0/5/10) keep their original rules (corner 0
+  still cannot take diagonal — start corner rule preserved).
+
+Test - `scripts/test-board-changes.mjs`:
+- Verified 23/24 assertions; the 1 "FAIL" was a wrong assertion in
+  the test (move IS available, but pathType returned as 'outer'
+  because step() converts on corner arrival — correct behavior).
+- Confirmed:
+  * Center on d5/d15/d0 → 2 options (continue + branch to BR)
+  * Center on d10 → 1 option (already toward BR)
+  * Center on d5, 3 steps → can reach BR corner (0) and finish
+  * BL corner → only outer, no diagonal
+  * TR/TL corners → still have diagonal option
+  * BR corner (start) → no diagonal (existing rule preserved)
+
+Stage Summary:
+- One-click piece move: tap selected piece to immediately move it
+  to the first available target (for pieces with multiple path
+  options, user should still click the highlighted target).
+- Center is now a 4-way junction for BR diagonal access.
+- BL corner can no longer take the diagonal shortcut to center;
+  the TR→BL one-way diagonal is now a permanent rule.

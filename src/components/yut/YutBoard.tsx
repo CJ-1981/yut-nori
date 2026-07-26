@@ -345,15 +345,32 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (p.playerId === currentPlayerIndex && !p.isCarried && !isHome) {
-                    selectPiece(selectedPieceId === p.pieceId ? null : p.pieceId);
+                  if (p.playerId !== currentPlayerIndex || p.isCarried || isHome) return;
+                  if (selectedPieceId === p.pieceId) {
+                    // Already selected -> move on second click
+                    if (possibleMoves.length > 0) {
+                      const move = possibleMoves[0];
+                      onPositionClick(move.position);
+                    } else {
+                      selectPiece(null);
+                    }
+                  } else {
+                    selectPiece(p.pieceId);
                   }
                 }}
                 onTouchStart={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  if (p.playerId === currentPlayerIndex && !p.isCarried && !isHome) {
-                    selectPiece(selectedPieceId === p.pieceId ? null : p.pieceId);
+                  if (p.playerId !== currentPlayerIndex || p.isCarried || isHome) return;
+                  if (selectedPieceId === p.pieceId) {
+                    if (possibleMoves.length > 0) {
+                      const move = possibleMoves[0];
+                      onPositionClick(move.position);
+                    } else {
+                      selectPiece(null);
+                    }
+                  } else {
+                    selectPiece(p.pieceId);
                   }
                 }}
               >
