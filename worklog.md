@@ -1121,3 +1121,61 @@ Stage Summary:
 - Language still persists across reloads via localStorage.
 - First paint is always English; saved language applies on the next
   tick via useEffect.
+
+---
+Task ID: 49
+Agent: Main (Super Z)
+Task: Fix deployment failure - rapier WASM file missing from build.
+
+Work Log:
+- Symptom: "deploying fails after publish". Investigated build output.
+- Build itself succeeds (next build completes in ~10s, no errors).
+- Standalone server starts and returns HTTP 200 for root URL.
+- BUT: @react-three/rapier depends on @dimforge/rapier3d-compat,
+  which loads its WASM binary at runtime via:
+    new URL("rapier_wasm3d_bg.wasm", ...)
+  → tries to fetch /rapier_wasm3d_bg.wasm at the public root.
+- The WASM file (1.4 MB) was NOT being copied to standalone output,
+  so on any deployed environment, the 3D yut physics simulation
+  would crash when the user throws a yut (WebAssembly module load
+  fails with 404).
+- The dev server worked only because the rapier3d-compat package
+  itself was reachable via node_modules; production standalone
+  tracing didn't include the .wasm asset.
+
+Fixes:
+1. Copied rapier_wasm3d_bg.wasm to public/rapier_wasm3d_bg.wasm
+   so the existing build step `cp -r public .next/standalone/`
+   bundles it into standalone AND serves it at the root URL.
+2. Updated next.config.ts with outputFileTracingIncludes:
+     "/": ["./node_modules/@dimforge/rapier3d-compat/rapier_wasm3d_bg.wasm"]
+   This makes Next.js's file tracing aware of the WASM, so it gets
+   copied into standalone/node_modules/@dimforge/rapier3d-compat/
+   as well (defense in depth).
+3. Updated package.json build script to copy the WASM into public/
+   on every build, so it stays in sync if the rapier package
+   version changes:
+     node -e "require('fs').copyFileSync(
+       'node_modules/@dimforge/rapier3d-compat/rapier_wasm3d_bg.wasm',
+       'public/rapier_wasm3d_bg.wasm')"
+
+Verification:
+- Clean rebuild (rm -rf .next && npm run build) succeeds.
+- WASM now present in 3 places inside .next/standalone/:
+    public/rapier_wasm3d_bg.wasm
+    node_modules/@dimforge/rapier3d-compat/rapier_wasm3d_bg.wasm
+    node_modules/@react-three/rapier/node_modules/@dimforge/rapier3d-compat/rapier_wasm3d_bg.wasm
+- npm start serves:
+    /                  -> HTTP 200 (11 KB HTML)
+    /rapier_wasm3d_bg.wasm -> HTTP 200 (1.44 MB, application/wasm)
+    /_next/static/chunks/<hash>.js -> HTTP 200
+- WASM file integrity verified: magic bytes "00 61 73 6d" (= "\0asm"),
+  version 0x1, identified as "WebAssembly binary module version 0x1 (MVP)".
+- Dev server also serves the WASM correctly.
+
+Stage Summary:
+- Deploy should now succeed: WASM file is included in the standalone
+  bundle and served at the URL rapier expects.
+- The 3D yut physics simulation will work in production deployments.
+- Build script self-heals: if rapier version changes, build script
+  re-copies the WASM into public/.
