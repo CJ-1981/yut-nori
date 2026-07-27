@@ -25,11 +25,11 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: 22
 
       - name: Install dependencies
-        run: npm ci
+        # Use npm install (not ci) because this project uses bun.lock, not package-lock.json
+        run: npm install --no-audit --no-fund
 
       - name: Build static site for GitHub Pages
         env:
