@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev -p 3000 2>&1 | tee dev.log",
     "build": "node -e \"require('fs').copyFileSync('node_modules/@dimforge/rapier3d-compat/rapier_wasm3d_bg.wasm','public/rapier_wasm3d_bg.wasm')\" && next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
+    "build:gh-pages": "node -e \"require('fs').copyFileSync('node_modules/@dimforge/rapier3d-compat/rapier_wasm3d_bg.wasm','public/rapier_wasm3d_bg.wasm')\" && cross-env DEPLOY_TARGET=gh-pages next build && touch out/.nojekyll",
+    "serve:gh-pages": "npx --yes serve out -l 3000",
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",
     "db:push": "prisma db push --accept-data-loss",
