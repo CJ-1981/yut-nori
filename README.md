@@ -4,6 +4,10 @@ A web-based implementation of **Yut Nori** (윷놀이), a classic Korean board g
 
 ![Game Screenshot](screenshot-final-game.png)
 
+## 🎮 Live Demo
+
+**[▶ Play Yut Nori Now](https://cj-1981.github.io/yut-nori/)** ← Click to play online!
+
 ## Overview
 
 Yut Nori is a traditional Korean board game played with four wooden sticks. This project recreates the authentic game experience in the browser with:
@@ -20,7 +24,6 @@ Yut Nori is a traditional Korean board game played with four wooden sticks. This
 - 🎮 **Multi-player Support**: Play with 2-4 players
 - 📱 **Mobile Friendly**: Touch controls and responsive layout
 - 🌐 **Internationalization**: Multi-language support with next-intl
-- 🎨 **Dark/Light Mode**: Theme switcher with next-themes
 - 🔒 **Persistent State**: Game state saved to localStorage
 - 📊 **Game Statistics**: Track game progress and scores
 
@@ -244,4 +247,4 @@ For issues, questions, or suggestions:
 
 ---
 
-**Play Yut Nori Online**: [https://cj-1981.github.io/yut-nori/](https://cj-1981.github.io/yut-nori/)
+**Enjoy playing Yut Nori!** Questions? See the [Support](#support) section above.
