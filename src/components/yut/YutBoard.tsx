@@ -393,15 +393,30 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
                   opacity={p.isCarried ? 0.7 : 1}
                   style={{ pointerEvents: 'none' }}
                 />
-                {/* Avatar emoji - larger */}
-                <text
-                  textAnchor="middle"
-                  dy={7}
-                  fontSize={22}
-                  style={{ pointerEvents: 'none', userSelect: 'none' }}
+                {/* Avatar emoji - larger (using foreignObject for Desktop Safari compatibility) */}
+                <foreignObject
+                  x={-20}
+                  y={-20}
+                  width={40}
+                  height={40}
+                  style={{ pointerEvents: 'none', overflow: 'visible' }}
                 >
-                  {avatar?.emoji ?? '●'}
-                </text>
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '22px',
+                      lineHeight: '1',
+                      userSelect: 'none',
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    {avatar?.emoji ?? '●'}
+                  </div>
+                </foreignObject>
                 {/* Stack indicator - show count on first piece of stack */}
                 {p.stackSize > 1 && p.stackIndex === 0 && !isHome && (
                   <text
