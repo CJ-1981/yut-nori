@@ -26,7 +26,9 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved && ['en', 'ko', 'ja', 'zh'].includes(saved)) {
-        setLangState(saved as Language);
+        queueMicrotask(() => {
+          setLangState(saved as Language);
+        });
       }
     } catch {
       // ignore
