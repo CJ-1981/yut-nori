@@ -8,6 +8,76 @@ import * as THREE from 'three';
 import { YutThrow } from '@/lib/game/types';
 import { soundManager } from '@/lib/sound/sounds';
 
+// Cached Three.js resources lazily created at module scope to prevent duplicate
+// canvas creation, geometry allocations, and GPU texture memory leaks across stick instances and throws.
+let cachedHalfCylinderGeometry: THREE.ExtrudeGeometry | null = null;
+let cachedEndCapGeometry: THREE.ShapeGeometry | null = null;
+let cachedStickTexture: THREE.CanvasTexture | null = null;
+
+function getSharedStickResources() {
+  if (!cachedHalfCylinderGeometry) {
+    const shape = new THREE.Shape();
+    const halfWidth = 0.15;
+    const halfHeight = 0.15;
+    shape.moveTo(-halfWidth, 0);
+    shape.lineTo(halfWidth, 0);
+    shape.bezierCurveTo(halfWidth, halfHeight * 0.55, halfWidth * 0.55, halfHeight, 0, halfHeight);
+    shape.bezierCurveTo(-halfWidth * 0.55, halfHeight, -halfWidth, halfHeight * 0.55, -halfWidth, 0);
+    const geom = new THREE.ExtrudeGeometry(shape, {
+      depth: 1.6,
+      bevelEnabled: false,
+      steps: 1,
+    });
+    geom.translate(0, 0, -0.8);
+    const pos = geom.attributes.position;
+    const uv = geom.attributes.uv;
+    for (let i = 0; i < pos.count; i++) {
+      const y = pos.getY(i);
+      const z = pos.getZ(i);
+      const u = (z + 0.8) / 1.6;
+      const v = Math.max(0, Math.min(1, y / halfHeight));
+      uv.setXY(i, u, v);
+    }
+    uv.needsUpdate = true;
+    cachedHalfCylinderGeometry = geom;
+  }
+
+  if (!cachedEndCapGeometry) {
+    const shape = new THREE.Shape();
+    const halfWidth = 0.15;
+    const halfHeight = 0.15;
+    shape.moveTo(-halfWidth, 0);
+    shape.lineTo(halfWidth, 0);
+    shape.bezierCurveTo(halfWidth, halfHeight * 0.55, halfWidth * 0.55, halfHeight, 0, halfHeight);
+    shape.bezierCurveTo(-halfWidth * 0.55, halfHeight, -halfWidth, halfHeight * 0.55, -halfWidth, 0);
+    cachedEndCapGeometry = new THREE.ShapeGeometry(shape);
+  }
+
+  if (!cachedStickTexture && typeof document !== 'undefined') {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#E8C887';
+    ctx.fillRect(0, 0, 256, 64);
+    ctx.fillStyle = '#3D2410';
+    ctx.fillRect(20, 24, 40, 4);
+    ctx.fillRect(36, 10, 8, 32);
+    ctx.fillRect(196, 24, 40, 4);
+    ctx.fillRect(212, 10, 8, 32);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.ClampToEdgeWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
+    cachedStickTexture = tex;
+  }
+
+  return {
+    halfCylinderGeometry: cachedHalfCylinderGeometry,
+    endCapGeometry: cachedEndCapGeometry,
+    stickTexture: cachedStickTexture,
+  };
+}
+
 // Physical yut stick with physics simulation
 interface PhysicsYutStickProps {
   index: number;
@@ -155,68 +225,12 @@ function PhysicsYutStick({ index, throwResult, isThrown, onAnimationEnd, onStick
   const isBackDoStick = throwResult?.result === 'back-do' && throwResult.backDoIndex === index;
   const bottomColor = isBackDoStick ? '#DC2626' : '#5C3A1A';
 
-  // Half-ellipse cross-section with UV mapping for texture
-  const halfCylinderGeometry = useMemo(() => {
-    const shape = new THREE.Shape();
-    const halfWidth = 0.15;
-    const halfHeight = 0.15;
-    shape.moveTo(-halfWidth, 0);
-    shape.lineTo(halfWidth, 0);
-    shape.bezierCurveTo(halfWidth, halfHeight * 0.55, halfWidth * 0.55, halfHeight, 0, halfHeight);
-    shape.bezierCurveTo(-halfWidth * 0.55, halfHeight, -halfWidth, halfHeight * 0.55, -halfWidth, 0);
-    const geom = new THREE.ExtrudeGeometry(shape, {
-      depth: 1.6,
-      bevelEnabled: false,
-      steps: 1,
-    });
-    geom.translate(0, 0, -0.8);
-    // Generate UVs: map Z (length) to U (0-1), Y (height) to V (0-1)
-    const pos = geom.attributes.position;
-    const uv = geom.attributes.uv;
-    for (let i = 0; i < pos.count; i++) {
-      const y = pos.getY(i);
-      const z = pos.getZ(i);
-      const u = (z + 0.8) / 1.6;
-      const v = Math.max(0, Math.min(1, y / halfHeight));
-      uv.setXY(i, u, v);
-    }
-    uv.needsUpdate = true;
-    return geom;
-  }, []);
-
-  // Create canvas texture with markings drawn on the surface
-  const stickTexture = useMemo(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 64;
-    const ctx = canvas.getContext('2d')!;
-    // Fill with bamboo color
-    ctx.fillStyle = '#E8C887';
-    ctx.fillRect(0, 0, 256, 64);
-    // Draw dark markings near both ends (cross marks)
-    ctx.fillStyle = '#3D2410';
-    // Left end mark
-    ctx.fillRect(20, 24, 40, 4);
-    ctx.fillRect(36, 10, 8, 32);
-    // Right end mark
-    ctx.fillRect(196, 24, 40, 4);
-    ctx.fillRect(212, 10, 8, 32);
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.wrapS = THREE.ClampToEdgeWrapping;
-    tex.wrapT = THREE.ClampToEdgeWrapping;
-    return tex;
-  }, []);
-
-  const endCapGeometry = useMemo(() => {
-    const shape = new THREE.Shape();
-    const halfWidth = 0.15;
-    const halfHeight = 0.15;
-    shape.moveTo(-halfWidth, 0);
-    shape.lineTo(halfWidth, 0);
-    shape.bezierCurveTo(halfWidth, halfHeight * 0.55, halfWidth * 0.55, halfHeight, 0, halfHeight);
-    shape.bezierCurveTo(-halfWidth * 0.55, halfHeight, -halfWidth, halfHeight * 0.55, -halfWidth, 0);
-    return new THREE.ShapeGeometry(shape);
-  }, []);
+  // Reuse shared geometries and texture singletons across all 4 stick instances and throws
+  // Prevents duplicate canvas creation, geometry allocations, and GPU texture memory leaks
+  const { halfCylinderGeometry, endCapGeometry, stickTexture } = useMemo(
+    () => getSharedStickResources(),
+    []
+  );
 
   return (
     <RigidBody
