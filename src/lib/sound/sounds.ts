@@ -22,7 +22,7 @@ type SoundType =
   | 'hover'
   | 'turnStart';
 
-class SoundManager {
+export class SoundManager {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private enabled = true;
