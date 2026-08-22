@@ -3,16 +3,133 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from '@/lib/game/store';
 import { useI18n } from '@/lib/i18n/I18nContext';
-import { AVATARS } from '@/lib/game/types';
+import { AVATARS, Player } from '@/lib/game/types';
 import { PLAYER_COLORS } from '@/lib/game/store';
 import { soundManager } from '@/lib/sound/sounds';
 import { YutBoard } from '@/components/yut/YutBoard';
 import { YutThrowPanel } from '@/components/yut/YutThrowPanel';
 import { PlayerPanel, Timer } from '@/components/yut/PlayerPanel';
+import {
+  getToastMessage,
+  getAutoSelectablePieceId,
+  getHintMessage,
+  getFinishedCount,
+  getSortedPlayers,
+  getFormattedGameTime,
+} from '@/lib/game/gameScreenHelpers';
+
+interface GameMenuModalProps {
+  onClose: () => void;
+  onRestart: () => void;
+  onMainMenu: () => void;
+  t: (key: string) => string;
+}
+
+function GameMenuModal({ onClose, onRestart, onMainMenu, t }: GameMenuModalProps) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-xl font-bold text-stone-800 mb-4">{t('mainMenu')}</h2>
+        <div className="space-y-3">
+          <button
+            onClick={() => {
+              soundManager.play('click');
+              onClose();
+            }}
+            className="w-full py-3 px-4 rounded-xl bg-amber-500 text-white font-bold hover:bg-amber-600"
+          >
+            ▶ {t('resume')}
+          </button>
+          <button
+            onClick={() => {
+              soundManager.play('click');
+              onClose();
+              onRestart();
+            }}
+            className="w-full py-3 px-4 rounded-xl bg-stone-100 text-stone-700 font-bold hover:bg-stone-200"
+          >
+            🔄 {t('restart')}
+          </button>
+          <button
+            onClick={() => {
+              soundManager.play('click');
+              onClose();
+              onMainMenu();
+            }}
+            className="w-full py-3 px-4 rounded-xl bg-stone-100 text-stone-700 font-bold hover:bg-stone-200"
+          >
+            🏠 {t('mainMenu')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface GameToastProps {
+  toast: string;
+  isCaptureToast: boolean;
+  isFinishToast: boolean;
+}
+
+function GameToast({ toast, isCaptureToast, isFinishToast }: GameToastProps) {
+  return (
+    <div
+      className={`fixed bottom-20 left-1/2 -translate-x-1/2 z-40 px-8 py-4 font-bold rounded-2xl shadow-2xl animate-[bounce_0.5s_ease-out] text-lg ${
+        isCaptureToast
+          ? 'bg-red-600 text-white ring-4 ring-red-300'
+          : isFinishToast
+          ? 'bg-green-600 text-white ring-4 ring-green-300'
+          : 'bg-stone-900/90 text-white'
+      }`}
+    >
+      {toast}
+    </div>
+  );
+}
+
+interface PlayerStandingRowProps {
+  player: Player;
+  rank: number;
+  isWinner: boolean;
+  t: (key: string) => string;
+}
+
+function PlayerStandingRow({ player, rank, isWinner, t }: PlayerStandingRowProps) {
+  const finished = getFinishedCount(player);
+  const avatar = AVATARS.find((a) => a.id === player.avatarId);
+  return (
+    <div
+      className={`flex items-center gap-3 p-3 rounded-lg ${
+        isWinner ? 'bg-amber-100 border-2 border-amber-300' : 'bg-stone-50'
+      }`}
+    >
+      <div className="text-lg font-bold text-stone-400 w-6">{rank}</div>
+      <div
+        className="w-10 h-10 rounded-full flex items-center justify-center text-xl"
+        style={{ background: PLAYER_COLORS[player.id] }}
+      >
+        {avatar?.emoji}
+      </div>
+      <div className="flex-1 text-left">
+        <div className="font-semibold text-stone-800">{player.name}</div>
+        <div className="text-xs text-stone-500">
+          {finished}/4 {t('finished')}
+        </div>
+      </div>
+      {isWinner && <div className="text-2xl">👑</div>}
+    </div>
+  );
+}
 
 export function GameScreen() {
   const { t } = useI18n();
-  const phase = useGameStore((s) => s.phase);
   const players = useGameStore((s) => s.players);
   const currentPlayerIndex = useGameStore((s) => s.currentPlayerIndex);
   const turnPhase = useGameStore((s) => s.turnPhase);
@@ -26,26 +143,15 @@ export function GameScreen() {
   const setLastMoveMessage = useGameStore((s) => s.setLastMoveMessage);
   const beginnerMode = useGameStore((s) => s.beginnerMode);
   const setPhase = useGameStore((s) => s.setPhase);
-  const numPlayers = useGameStore((s) => s.numPlayers);
 
   const [showMenu, setShowMenu] = useState(false);
   const canMoveAnyPiece = useGameStore((s) => s.canMoveAnyPiece);
   const skipTurn = useGameStore((s) => s.skipTurn);
 
-  // Derive toast content directly from lastMoveMessage (no setState needed)
-  const toast = (() => {
-    if (!lastMoveMessage) return null;
-    if (lastMoveMessage === 'skip') return `⏭️ ${t('next')}`;
-    if (lastMoveMessage.startsWith('capture:')) {
-      const count = lastMoveMessage.split(':')[1] ?? '1';
-      return `⚔️ ${t('hintCaptured')} (×${count})`;
-    }
-    if (lastMoveMessage.startsWith('carry:')) return `🤝 ${t('hintCarried')}`;
-    if (lastMoveMessage === 'finish') return `🏁 ${t('hintFinished')}`;
-    return `🚶 ${t('movePiece')}`;
-  })();
-
-  const isCaptureToast = lastMoveMessage?.startsWith('capture:');
+  // Derive toast content directly from lastMoveMessage
+  const toast = getToastMessage(lastMoveMessage, t);
+  const isCaptureToast = Boolean(lastMoveMessage?.startsWith('capture:'));
+  const isFinishToast = lastMoveMessage === 'finish';
 
   // Play sound effects based on move result
   useEffect(() => {
@@ -59,7 +165,7 @@ export function GameScreen() {
     }
   }, [lastMoveMessage]);
 
-  // Auto-clear the toast after a delay (timer callback setState is fine)
+  // Auto-clear the toast after a delay
   useEffect(() => {
     if (!lastMoveMessage) return;
     const timer = setTimeout(() => {
@@ -75,35 +181,20 @@ export function GameScreen() {
     }
   }, [selectedPieceId, currentYut, turnPhase, computePossibleMoves]);
 
-  // Auto-select a piece when entering selecting phase:
-  // - If no pieces on board (all at home), auto-select first home piece (so user can bring it out)
-  // - If only one piece is on board and can move, auto-select it
+  // Auto-select a piece when entering selecting phase
   useEffect(() => {
-    if (turnPhase !== 'selecting' || !currentYut || selectedPieceId) return;
-    const currentPlayer = players[currentPlayerIndex];
-    if (!currentPlayer) return;
+    const pieceIdToSelect = getAutoSelectablePieceId(
+      players[currentPlayerIndex],
+      turnPhase,
+      currentYut,
+      selectedPieceId
+    );
+    if (!pieceIdToSelect) return;
 
-    const homePieces = currentPlayer.pieces.filter((p) => p.position === -1);
-    const boardPieces = currentPlayer.pieces.filter((p) => p.position >= 0);
-
-    // If back-do and all pieces at home, can't move (handled by noMovesAvailable)
-    if (currentYut.steps < 0 && boardPieces.length === 0) return;
-
-    // If no pieces on board, auto-select first home piece
-    if (boardPieces.length === 0 && homePieces.length > 0 && currentYut.steps > 0) {
-      const timer = setTimeout(() => {
-        selectPiece(homePieces[0].id);
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-
-    // If only one piece on board, auto-select it (only one choice)
-    if (boardPieces.length === 1 && (currentYut.steps > 0 || true)) {
-      const timer = setTimeout(() => {
-        selectPiece(boardPieces[0].id);
-      }, 300);
-      return () => clearTimeout(timer);
-    }
+    const timer = setTimeout(() => {
+      selectPiece(pieceIdToSelect);
+    }, 300);
+    return () => clearTimeout(timer);
   }, [turnPhase, currentYut, selectedPieceId, players, currentPlayerIndex, selectPiece]);
 
   const handlePositionClick = (pos: number) => {
@@ -117,7 +208,7 @@ export function GameScreen() {
         if (selectedPieceId) {
           const selectedPiece = currentPlayer?.pieces.find((p) => p.id === selectedPieceId);
           if (selectedPiece && selectedPiece.position === -1) {
-            const moveFromStart = possibleMoves.find((m) => true);
+            const moveFromStart = possibleMoves.find(() => true);
             if (moveFromStart) {
               soundManager.play('move');
               movePiece(selectedPieceId, moveFromStart.position, moveFromStart.pathType, moveFromStart.isFinish);
@@ -141,21 +232,9 @@ export function GameScreen() {
     }
   };
 
-  const currentPlayer = players[currentPlayerIndex];
-  const currentAvatar = currentPlayer ? AVATARS.find((a) => a.id === currentPlayer.avatarId) : null;
-  const currentColor = PLAYER_COLORS[currentPlayerIndex];
-
   // Check if no pieces can move (e.g., back-do when all at home)
-  const noMovesAvailable = turnPhase === 'selecting' && currentYut && !canMoveAnyPiece();
-
-  const hint = (() => {
-    if (turnPhase === 'throwing') return t('hintThrow');
-    if (noMovesAvailable) return t('hintBackDo');
-    if (turnPhase === 'selecting' && !selectedPieceId) return t('hintSelectPiece');
-    if (selectedPieceId && possibleMoves.length === 0) return t('hintSelectPiece');
-    if (selectedPieceId) return t('hintChoosePath');
-    return '';
-  })();
+  const noMovesAvailable = turnPhase === 'selecting' && currentYut !== null && !canMoveAnyPiece();
+  const hint = getHintMessage(turnPhase, noMovesAvailable, selectedPieceId, possibleMoves.length, t);
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-amber-50 via-stone-50 to-orange-50 flex flex-col">
@@ -223,63 +302,21 @@ export function GameScreen() {
 
       {/* Toast notification */}
       {toast && (
-        <div
-          className={`fixed bottom-20 left-1/2 -translate-x-1/2 z-40 px-8 py-4 font-bold rounded-2xl shadow-2xl animate-[bounce_0.5s_ease-out] text-lg ${
-            isCaptureToast
-              ? 'bg-red-600 text-white ring-4 ring-red-300'
-              : lastMoveMessage === 'finish'
-              ? 'bg-green-600 text-white ring-4 ring-green-300'
-              : 'bg-stone-900/90 text-white'
-          }`}
-        >
-          {toast}
-        </div>
+        <GameToast
+          toast={toast}
+          isCaptureToast={isCaptureToast}
+          isFinishToast={isFinishToast}
+        />
       )}
 
       {/* Menu modal */}
       {showMenu && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-          onClick={() => setShowMenu(false)}
-        >
-          <div
-            className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-xl font-bold text-stone-800 mb-4">{t('mainMenu')}</h2>
-            <div className="space-y-3">
-              <button
-                onClick={() => {
-                  soundManager.play('click');
-                  setShowMenu(false);
-                }}
-                className="w-full py-3 px-4 rounded-xl bg-amber-500 text-white font-bold hover:bg-amber-600"
-              >
-                ▶ {t('resume')}
-              </button>
-              <button
-                onClick={() => {
-                  soundManager.play('click');
-                  setShowMenu(false);
-                  useGameStore.getState().startGame();
-                }}
-                className="w-full py-3 px-4 rounded-xl bg-stone-100 text-stone-700 font-bold hover:bg-stone-200"
-              >
-                🔄 {t('restart')}
-              </button>
-              <button
-                onClick={() => {
-                  soundManager.play('click');
-                  setShowMenu(false);
-                  setPhase('menu');
-                }}
-                className="w-full py-3 px-4 rounded-xl bg-stone-100 text-stone-700 font-bold hover:bg-stone-200"
-              >
-                🏠 {t('mainMenu')}
-              </button>
-            </div>
-          </div>
-        </div>
+        <GameMenuModal
+          onClose={() => setShowMenu(false)}
+          onRestart={() => useGameStore.getState().startGame()}
+          onMainMenu={() => setPhase('menu')}
+          t={t}
+        />
       )}
     </div>
   );
@@ -302,9 +339,8 @@ export function GameOverScreen() {
   const winnerAvatar = winner ? AVATARS.find((a) => a.id === winner.avatarId) : null;
   const winnerColor = winnerId !== null ? PLAYER_COLORS[winnerId] : '#000';
 
-  const finalTime = totalElapsedMs || (gameStartTime ? Date.now() - gameStartTime : 0);
-  const minutes = Math.floor(finalTime / 60000);
-  const seconds = Math.floor((finalTime % 60000) / 1000);
+  const { formatted: gameTimeFormatted } = getFormattedGameTime(totalElapsedMs, gameStartTime);
+  const sortedPlayers = getSortedPlayers(players);
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-amber-100 via-orange-100 to-yellow-100 flex flex-col items-center justify-center p-4">
@@ -342,40 +378,20 @@ export function GameOverScreen() {
           {winner?.name}
         </div>
         <div className="text-sm text-stone-500 mb-6">
-          {t('gameTime')}: {minutes}:{seconds.toString().padStart(2, '0')}
+          {t('gameTime')}: {gameTimeFormatted}
         </div>
 
         {/* Standings */}
         <div className="mb-6 space-y-2">
-          {players
-            .slice()
-            .sort((a, b) => {
-              const aFinished = a.pieces.filter((p) => p.position === -2).length;
-              const bFinished = b.pieces.filter((p) => p.position === -2).length;
-              return bFinished - aFinished;
-            })
-            .map((p, i) => {
-              const finished = p.pieces.filter((piece) => piece.position === -2).length;
-              const avatar = AVATARS.find((a) => a.id === p.avatarId);
-              return (
-                <div
-                  key={p.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg ${
-                    p.id === winnerId ? 'bg-amber-100 border-2 border-amber-300' : 'bg-stone-50'
-                  }`}
-                >
-                  <div className="text-lg font-bold text-stone-400 w-6">{i + 1}</div>
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ background: PLAYER_COLORS[p.id] }}>
-                    {avatar?.emoji}
-                  </div>
-                  <div className="flex-1 text-left">
-                    <div className="font-semibold text-stone-800">{p.name}</div>
-                    <div className="text-xs text-stone-500">{finished}/4 {t('finished')}</div>
-                  </div>
-                  {p.id === winnerId && <div className="text-2xl">👑</div>}
-                </div>
-              );
-            })}
+          {sortedPlayers.map((p, i) => (
+            <PlayerStandingRow
+              key={p.id}
+              player={p}
+              rank={i + 1}
+              isWinner={p.id === winnerId}
+              t={t}
+            />
+          ))}
         </div>
 
         <div className="flex gap-3">
