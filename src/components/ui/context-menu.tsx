@@ -5,6 +5,7 @@ import * as ContextMenuPrimitive from "@radix-ui/react-context-menu"
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { MenuShortcut } from "@/components/ui/menu-shortcut"
 
 function ContextMenu({
   ...props
@@ -221,19 +222,9 @@ function ContextMenuSeparator({
 }
 
 function ContextMenuShortcut({
-  className,
   ...props
-}: React.ComponentProps<"span">) {
-  return (
-    <span
-      data-slot="context-menu-shortcut"
-      className={cn(
-        "text-muted-foreground ml-auto text-xs tracking-widest",
-        className
-      )}
-      {...props}
-    />
-  )
+}: React.ComponentProps<typeof MenuShortcut>) {
+  return <MenuShortcut data-slot="context-menu-shortcut" {...props} />
 }
 
 export {
