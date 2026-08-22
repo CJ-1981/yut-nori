@@ -5,6 +5,7 @@ import * as MenubarPrimitive from "@radix-ui/react-menubar"
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { MenuShortcut } from "@/components/ui/menu-shortcut"
 
 function Menubar({
   className,
@@ -195,19 +196,9 @@ function MenubarSeparator({
 }
 
 function MenubarShortcut({
-  className,
   ...props
-}: React.ComponentProps<"span">) {
-  return (
-    <span
-      data-slot="menubar-shortcut"
-      className={cn(
-        "text-muted-foreground ml-auto text-xs tracking-widest",
-        className
-      )}
-      {...props}
-    />
-  )
+}: React.ComponentProps<typeof MenuShortcut>) {
+  return <MenuShortcut data-slot="menubar-shortcut" {...props} />
 }
 
 function MenubarSub({
