@@ -79,6 +79,55 @@ function defaultPlayers(): Player[] {
   return createInitialPlayers(2);
 }
 
+function getCapturedPieces(
+  players: Player[],
+  currentPlayerId: number,
+  targetPos: number,
+  isFinish: boolean
+): { pieceId: string; playerId: number }[] {
+  if (isFinish || targetPos < 0) return [];
+
+  const captured: { pieceId: string; playerId: number }[] = [];
+  for (const otherPlayer of players) {
+    if (otherPlayer.id === currentPlayerId) continue;
+    for (const otherPiece of otherPlayer.pieces) {
+      if (otherPiece.position !== targetPos) continue;
+
+      captured.push({ pieceId: otherPiece.id, playerId: otherPlayer.id });
+      for (const carriedId of otherPiece.carrying) {
+        captured.push({ pieceId: carriedId, playerId: otherPlayer.id });
+      }
+    }
+  }
+  return captured;
+}
+
+function getCarriedPieces(
+  player: Player,
+  mainPieceId: string,
+  initialCarried: string[],
+  targetPos: number,
+  isFinish: boolean
+): string[] {
+  if (isFinish || targetPos < 0) return [...initialCarried];
+
+  const carried = [...initialCarried];
+  for (const ownPiece of player.pieces) {
+    if (ownPiece.id === mainPieceId || initialCarried.includes(ownPiece.id)) continue;
+    if (ownPiece.position !== targetPos || ownPiece.position === -2) continue;
+
+    if (!carried.includes(ownPiece.id)) {
+      carried.push(ownPiece.id);
+    }
+    for (const subCarried of ownPiece.carrying) {
+      if (!carried.includes(subCarried)) {
+        carried.push(subCarried);
+      }
+    }
+  }
+  return carried;
+}
+
 const initialState = {
   phase: 'menu' as GamePhase,
   beginnerMode: false,
@@ -324,34 +373,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     const newPos = targetPos;
     const newPath = targetPath;
-    let captured: { pieceId: string; playerId: number }[] = [];
 
-    if (!isFinish && newPos >= 0) {
-      for (const otherPlayer of state.players) {
-        if (otherPlayer.id === player.id) continue;
-        for (const otherPiece of otherPlayer.pieces) {
-          if (otherPiece.position === newPos) {
-            captured.push({ pieceId: otherPiece.id, playerId: otherPlayer.id });
-            for (const carriedId of otherPiece.carrying) {
-              captured.push({ pieceId: carriedId, playerId: otherPlayer.id });
-            }
-          }
-        }
-      }
-    }
-
-    let carried = [...allCarried];
-    if (!isFinish && newPos >= 0) {
-      for (const ownPiece of player.pieces) {
-        if (ownPiece.id === mainPieceId || allCarried.includes(ownPiece.id)) continue;
-        if (ownPiece.position === newPos && ownPiece.position !== -2) {
-          if (!carried.includes(ownPiece.id)) carried.push(ownPiece.id);
-          for (const subCarried of ownPiece.carrying) {
-            if (!carried.includes(subCarried)) carried.push(subCarried);
-          }
-        }
-      }
-    }
+    const captured = getCapturedPieces(state.players, player.id, newPos, isFinish);
+    const carried = getCarriedPieces(player, mainPieceId, allCarried, newPos, isFinish);
 
     const capturedIds = new Set(captured.map((c) => c.pieceId));
     const updatedPlayers = state.players.map((p) => {
