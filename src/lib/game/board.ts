@@ -236,10 +236,22 @@ export function isDiagonalPoint(pos: number): boolean {
 //   0 top faces = Yut (4 steps, extra turn)
 // Back-Do: special case - 3 top faces + 1 red bottom face up
 //   (the one bottom-up stick has RED bottom = back-do)
+function getRandomFloat(): number {
+  const array = new Uint32Array(1);
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    crypto.getRandomValues(array);
+  } else if (typeof globalThis !== 'undefined' && typeof globalThis.crypto?.getRandomValues === 'function') {
+    globalThis.crypto.getRandomValues(array);
+  } else {
+    return Math.random();
+  }
+  return array[0] / 0x100000000;
+}
+
 export function rollYut(): YutThrowResult {
   // Determine number of top faces (light side up) - 0 to 4
   // Probability distribution adjusted for gameplay
-  const r2 = Math.random();
+  const r2 = getRandomFloat();
   let topCount: number;
   if (r2 < 0.06) topCount = 4;       // Mo (6%)
   else if (r2 < 0.25) topCount = 0;  // Yut (19%)
@@ -251,7 +263,7 @@ export function rollYut(): YutThrowResult {
   const sticks = Array.from({ length: 4 }, (_, i) => i < topCount);
   // Shuffle so top faces are random positions
   for (let i = sticks.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(getRandomFloat() * (i + 1));
     [sticks[i], sticks[j]] = [sticks[j], sticks[i]];
   }
 
@@ -259,7 +271,7 @@ export function rollYut(): YutThrowResult {
   // The bottom-up stick has a red bottom = back-do
   if (topCount === 3) {
     // ~25% chance that the one bottom-up stick is the red-bottomed (back-do)
-    if (Math.random() < 0.25) {
+    if (getRandomFloat() < 0.25) {
       // Find the bottom-up stick index
       const backDoIndex = sticks.indexOf(false);
       return {
