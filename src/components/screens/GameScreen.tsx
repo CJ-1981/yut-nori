@@ -106,30 +106,36 @@ export function GameScreen() {
     }
   }, [turnPhase, currentYut, selectedPieceId, players, currentPlayerIndex, selectPiece]);
 
+  const handleStartPositionClick = () => {
+    if (!currentYut || currentYut.steps <= 0) return false;
+
+    const currentPlayer = players[currentPlayerIndex];
+    const homePieces = currentPlayer?.pieces.filter((p) => p.position === -1) ?? [];
+    if (homePieces.length === 0) return false;
+
+    // If home piece already selected, bring it out (move)
+    if (selectedPieceId) {
+      const selectedPiece = currentPlayer?.pieces.find((p) => p.id === selectedPieceId);
+      if (selectedPiece?.position === -1) {
+        const moveFromStart = possibleMoves.find(() => true);
+        if (moveFromStart) {
+          soundManager.play('move');
+          movePiece(selectedPieceId, moveFromStart.position, moveFromStart.pathType, moveFromStart.isFinish);
+          return true;
+        }
+      }
+    }
+
+    // Otherwise select first home piece
+    soundManager.play('click');
+    selectPiece(homePieces[0].id);
+    return true;
+  };
+
   const handlePositionClick = (pos: number) => {
     // Start position (0) click: select home piece or bring it out
-    if (pos === 0 && currentYut && currentYut.steps > 0) {
-      const currentPlayer = players[currentPlayerIndex];
-      const homePieces = currentPlayer?.pieces.filter((p) => p.position === -1) ?? [];
-
-      if (homePieces.length > 0) {
-        // If home piece already selected, bring it out (move)
-        if (selectedPieceId) {
-          const selectedPiece = currentPlayer?.pieces.find((p) => p.id === selectedPieceId);
-          if (selectedPiece && selectedPiece.position === -1) {
-            const moveFromStart = possibleMoves.find((m) => true);
-            if (moveFromStart) {
-              soundManager.play('move');
-              movePiece(selectedPieceId, moveFromStart.position, moveFromStart.pathType, moveFromStart.isFinish);
-              return;
-            }
-          }
-        }
-        // Otherwise select first home piece
-        soundManager.play('click');
-        selectPiece(homePieces[0].id);
-        return;
-      }
+    if (pos === 0 && handleStartPositionClick()) {
+      return;
     }
 
     // Normal move: if a move target is clicked and a piece is selected
