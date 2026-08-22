@@ -5,6 +5,7 @@ import { Command as CommandPrimitive } from "cmdk"
 import { SearchIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { MenuShortcut } from "@/components/ui/menu-shortcut"
 import {
   Dialog,
   DialogContent,
@@ -156,19 +157,9 @@ function CommandItem({
 }
 
 function CommandShortcut({
-  className,
   ...props
-}: React.ComponentProps<"span">) {
-  return (
-    <span
-      data-slot="command-shortcut"
-      className={cn(
-        "text-muted-foreground ml-auto text-xs tracking-widest",
-        className
-      )}
-      {...props}
-    />
-  )
+}: React.ComponentProps<typeof MenuShortcut>) {
+  return <MenuShortcut data-slot="command-shortcut" {...props} />
 }
 
 export {
