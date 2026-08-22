@@ -34,6 +34,22 @@ function useChart() {
   return context
 }
 
+export function sanitizeId(id: string): string {
+  return id.replace(/[^a-zA-Z0-9_-]/g, "")
+}
+
+export function sanitizeKey(key: string): string {
+  return key.replace(/[^a-zA-Z0-9_-]/g, "")
+}
+
+export function sanitizeColor(color: string): string {
+  if (typeof color !== "string") return ""
+  if (/javascript:|url\(|expression\(/i.test(color)) {
+    return ""
+  }
+  return color.replace(/<|>|;|{|}|"|'|\\|\r|\n/g, "").trim()
+}
+
 function ChartContainer({
   id,
   className,
@@ -47,7 +63,8 @@ function ChartContainer({
   >["children"]
 }) {
   const uniqueId = React.useId()
-  const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`
+  const rawId = id || uniqueId.replace(/:/g, "")
+  const chartId = `chart-${sanitizeId(rawId)}`
 
   return (
     <ChartContext.Provider value={{ config }}>
@@ -78,25 +95,42 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null
   }
 
+  const cleanId = sanitizeId(id)
+
+  const cssLines: string[] = []
+
+  for (const [theme, prefix] of Object.entries(THEMES)) {
+    const selectorPrefix = prefix ? `${prefix} ` : ""
+    const styleRules: string[] = []
+
+    for (const [key, itemConfig] of colorConfig) {
+      const rawColor =
+        itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
+        itemConfig.color
+      if (rawColor) {
+        const cleanKey = sanitizeKey(key)
+        const cleanColor = sanitizeColor(rawColor)
+        if (cleanKey && cleanColor) {
+          styleRules.push(`  --color-${cleanKey}: ${cleanColor};`)
+        }
+      }
+    }
+
+    if (styleRules.length > 0) {
+      cssLines.push(
+        `${selectorPrefix}[data-chart=${cleanId}] {\n${styleRules.join("\n")}\n}`
+      )
+    }
+  }
+
+  if (!cssLines.length) {
+    return null
+  }
+
   return (
     <style
       dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
-${colorConfig
-  .map(([key, itemConfig]) => {
-    const color =
-      itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
-      itemConfig.color
-    return color ? `  --color-${key}: ${color};` : null
-  })
-  .join("\n")}
-}
-`
-          )
-          .join("\n"),
+        __html: cssLines.join("\n"),
       }}
     />
   )
