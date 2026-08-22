@@ -134,6 +134,19 @@ function ContextMenuItem({
   )
 }
 
+function ContextMenuItemIndicator({
+  children,
+  ...props
+}: React.ComponentProps<typeof ContextMenuPrimitive.ItemIndicator>) {
+  return (
+    <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
+      <ContextMenuPrimitive.ItemIndicator {...props}>
+        {children}
+      </ContextMenuPrimitive.ItemIndicator>
+    </span>
+  )
+}
+
 function ContextMenuCheckboxItem({
   className,
   children,
@@ -150,11 +163,9 @@ function ContextMenuCheckboxItem({
       checked={checked}
       {...props}
     >
-      <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
-        <ContextMenuPrimitive.ItemIndicator>
-          <CheckIcon className="size-4" />
-        </ContextMenuPrimitive.ItemIndicator>
-      </span>
+      <ContextMenuItemIndicator>
+        <CheckIcon className="size-4" />
+      </ContextMenuItemIndicator>
       {children}
     </ContextMenuPrimitive.CheckboxItem>
   )
@@ -174,11 +185,9 @@ function ContextMenuRadioItem({
       )}
       {...props}
     >
-      <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
-        <ContextMenuPrimitive.ItemIndicator>
-          <CircleIcon className="size-2 fill-current" />
-        </ContextMenuPrimitive.ItemIndicator>
-      </span>
+      <ContextMenuItemIndicator>
+        <CircleIcon className="size-2 fill-current" />
+      </ContextMenuItemIndicator>
       {children}
     </ContextMenuPrimitive.RadioItem>
   )

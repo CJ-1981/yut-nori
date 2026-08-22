@@ -111,6 +111,19 @@ function MenubarItem({
   )
 }
 
+function MenubarItemIndicator({
+  children,
+  ...props
+}: React.ComponentProps<typeof MenubarPrimitive.ItemIndicator>) {
+  return (
+    <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
+      <MenubarPrimitive.ItemIndicator {...props}>
+        {children}
+      </MenubarPrimitive.ItemIndicator>
+    </span>
+  )
+}
+
 function MenubarCheckboxItem({
   className,
   children,
@@ -127,11 +140,9 @@ function MenubarCheckboxItem({
       checked={checked}
       {...props}
     >
-      <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
-        <MenubarPrimitive.ItemIndicator>
-          <CheckIcon className="size-4" />
-        </MenubarPrimitive.ItemIndicator>
-      </span>
+      <MenubarItemIndicator>
+        <CheckIcon className="size-4" />
+      </MenubarItemIndicator>
       {children}
     </MenubarPrimitive.CheckboxItem>
   )
@@ -151,11 +162,9 @@ function MenubarRadioItem({
       )}
       {...props}
     >
-      <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
-        <MenubarPrimitive.ItemIndicator>
-          <CircleIcon className="size-2 fill-current" />
-        </MenubarPrimitive.ItemIndicator>
-      </span>
+      <MenubarItemIndicator>
+        <CircleIcon className="size-2 fill-current" />
+      </MenubarItemIndicator>
       {children}
     </MenubarPrimitive.RadioItem>
   )
