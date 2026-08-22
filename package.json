@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000 2>&1 | tee dev.log",
-    "build": "node -e \"require('fs').copyFileSync('node_modules/@dimforge/rapier3d-compat/rapier_wasm3d_bg.wasm','public/rapier_wasm3d_bg.wasm')\" && next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
-    "build:gh-pages": "node -e \"require('fs').copyFileSync('node_modules/@dimforge/rapier3d-compat/rapier_wasm3d_bg.wasm','public/rapier_wasm3d_bg.wasm')\" && cross-env DEPLOY_TARGET=gh-pages next build && touch out/.nojekyll",
+    "build": "node -e \"const fs=require('fs'),path=require('path');function findWasm(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){const f=path.join(d,e.name);if(e.isDirectory()){const found=findWasm(f);if(found)return found;}else if(e.name==='rapier_wasm3d_bg.wasm')return f;}}if(!fs.existsSync('public/rapier_wasm3d_bg.wasm')){const wasm=findWasm('node_modules');if(wasm)fs.copyFileSync(wasm,'public/rapier_wasm3d_bg.wasm');}\" && next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
+    "build:gh-pages": "node -e \"const fs=require('fs'),path=require('path');function findWasm(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){const f=path.join(d,e.name);if(e.isDirectory()){const found=findWasm(f);if(found)return found;}else if(e.name==='rapier_wasm3d_bg.wasm')return f;}}if(!fs.existsSync('public/rapier_wasm3d_bg.wasm')){const wasm=findWasm('node_modules');if(wasm)fs.copyFileSync(wasm,'public/rapier_wasm3d_bg.wasm');}\" && cross-env DEPLOY_TARGET=gh-pages next build && touch out/.nojekyll",
     "serve:gh-pages": "npx --yes serve out -l 3000",
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",

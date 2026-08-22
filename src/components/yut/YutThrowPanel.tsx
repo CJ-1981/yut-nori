@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useGameStore } from '@/lib/game/store';
 import { YutThrow } from '@/lib/game/types';
 import { useI18n } from '@/lib/i18n/I18nContext';

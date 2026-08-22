@@ -595,5 +595,6 @@ export const translations: Record<Language, TranslationDict> = {
 };
 
 export function t(lang: Language, key: TranslationKey): string {
-  return translations[lang][key] ?? key;
+  const dict = translations[lang] || translations['en'];
+  return dict?.[key] || translations['en']?.[key] || key;
 }

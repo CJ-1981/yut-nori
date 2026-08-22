@@ -1,6 +1,6 @@
 'use client';
 
-import { BOARD_POSITIONS, isCorner, isCenter, isDiagonalPoint, getPositionCoord, CORNER_POSITIONS, CENTER_POSITION } from '@/lib/game/board';
+import { BOARD_POSITIONS, isCorner, isCenter, isDiagonalPoint, getPositionCoord, CORNER_POSITIONS } from '@/lib/game/board';
 import { useGameStore } from '@/lib/game/store';
 import { PLAYER_COLORS } from '@/lib/game/store';
 import { AVATARS } from '@/lib/game/types';
@@ -282,24 +282,48 @@ export function YutBoard({ onPositionClick, highlightedPositions, beginnerMode }
           }> = [];
 
           for (const player of players) {
+            const carriedSet = new Set<string>();
+            const posMap = new Map<number, typeof player.pieces>();
+
+            for (const p of player.pieces) {
+              if (p.carrying) {
+                for (let i = 0; i < p.carrying.length; i++) {
+                  carriedSet.add(p.carrying[i]);
+                }
+              }
+              if (p.position >= 0) {
+                let list = posMap.get(p.position);
+                if (!list) {
+                  list = [];
+                  posMap.set(p.position, list);
+                }
+                list.push(p);
+              }
+            }
+
             for (const piece of player.pieces) {
               if (piece.position === -2) continue; // finished, don't render
-              // Include both home (-1) and board (>=0) pieces
-              const isCarried = players
-                .find((p) => p.id === player.id)
-                ?.pieces.some((p) => p.carrying.includes(piece.id)) ?? false;
-              // Find stack index at this position for this player
-              const piecesAtSamePos = player.pieces.filter(
-                (p) => p.position === piece.position && p.position >= 0
-              );
-              const stackIndex = piecesAtSamePos.findIndex((p) => p.id === piece.id);
+
+              const isCarried = carriedSet.has(piece.id);
+              let stackIndex = 0;
+              let stackSize = 1;
+
+              if (piece.position >= 0) {
+                const piecesAtSamePos = posMap.get(piece.position);
+                if (piecesAtSamePos) {
+                  stackSize = piecesAtSamePos.length;
+                  const idx = piecesAtSamePos.indexOf(piece);
+                  if (idx >= 0) stackIndex = idx;
+                }
+              }
+
               allPieces.push({
                 pieceId: piece.id,
                 playerId: piece.playerId,
                 position: piece.position,
                 isCarried,
-                stackIndex: stackIndex >= 0 ? stackIndex : 0,
-                stackSize: piece.position >= 0 ? piecesAtSamePos.length : 1,
+                stackIndex,
+                stackSize,
               });
             }
           }

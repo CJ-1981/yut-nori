@@ -5,6 +5,7 @@ import * as ContextMenuPrimitive from "@radix-ui/react-context-menu"
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { MenuShortcut } from "@/components/ui/menu-shortcut"
 
 function ContextMenu({
   ...props
@@ -134,6 +135,19 @@ function ContextMenuItem({
   )
 }
 
+const contextMenuItemSelectableClassName =
+  "focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+
+function ContextMenuItemIndicator({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
+      <ContextMenuPrimitive.ItemIndicator>
+        {children}
+      </ContextMenuPrimitive.ItemIndicator>
+    </span>
+  )
+}
+
 function ContextMenuCheckboxItem({
   className,
   children,
@@ -143,18 +157,13 @@ function ContextMenuCheckboxItem({
   return (
     <ContextMenuPrimitive.CheckboxItem
       data-slot="context-menu-checkbox-item"
-      className={cn(
-        "focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className
-      )}
+      className={cn(contextMenuItemSelectableClassName, className)}
       checked={checked}
       {...props}
     >
-      <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
-        <ContextMenuPrimitive.ItemIndicator>
-          <CheckIcon className="size-4" />
-        </ContextMenuPrimitive.ItemIndicator>
-      </span>
+      <ContextMenuItemIndicator>
+        <CheckIcon className="size-4" />
+      </ContextMenuItemIndicator>
       {children}
     </ContextMenuPrimitive.CheckboxItem>
   )
@@ -168,17 +177,12 @@ function ContextMenuRadioItem({
   return (
     <ContextMenuPrimitive.RadioItem
       data-slot="context-menu-radio-item"
-      className={cn(
-        "focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className
-      )}
+      className={cn(contextMenuItemSelectableClassName, className)}
       {...props}
     >
-      <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
-        <ContextMenuPrimitive.ItemIndicator>
-          <CircleIcon className="size-2 fill-current" />
-        </ContextMenuPrimitive.ItemIndicator>
-      </span>
+      <ContextMenuItemIndicator>
+        <CircleIcon className="size-2 fill-current" />
+      </ContextMenuItemIndicator>
       {children}
     </ContextMenuPrimitive.RadioItem>
   )
@@ -218,19 +222,9 @@ function ContextMenuSeparator({
 }
 
 function ContextMenuShortcut({
-  className,
   ...props
-}: React.ComponentProps<"span">) {
-  return (
-    <span
-      data-slot="context-menu-shortcut"
-      className={cn(
-        "text-muted-foreground ml-auto text-xs tracking-widest",
-        className
-      )}
-      {...props}
-    />
-  )
+}: React.ComponentProps<typeof MenuShortcut>) {
+  return <MenuShortcut data-slot="context-menu-shortcut" {...props} />
 }
 
 export {
