@@ -1,6 +1,6 @@
 'use client';
 
-import { BOARD_POSITIONS, isCorner, isCenter, isDiagonalPoint, getPositionCoord, CORNER_POSITIONS, CENTER_POSITION } from '@/lib/game/board';
+import { BOARD_POSITIONS, isCorner, isCenter, isDiagonalPoint, getPositionCoord, CORNER_POSITIONS } from '@/lib/game/board';
 import { useGameStore } from '@/lib/game/store';
 import { PLAYER_COLORS } from '@/lib/game/store';
 import { AVATARS } from '@/lib/game/types';
