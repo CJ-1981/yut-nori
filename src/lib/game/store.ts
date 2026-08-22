@@ -331,9 +331,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (otherPlayer.id === player.id) continue;
         for (const otherPiece of otherPlayer.pieces) {
           if (otherPiece.position === newPos) {
-            captured.push({ pieceId: otherPiece.id, playerId: otherPlayer.id });
+            if (!captured.some((c) => c.pieceId === otherPiece.id)) {
+              captured.push({ pieceId: otherPiece.id, playerId: otherPlayer.id });
+            }
             for (const carriedId of otherPiece.carrying) {
-              captured.push({ pieceId: carriedId, playerId: otherPlayer.id });
+              if (!captured.some((c) => c.pieceId === carriedId)) {
+                captured.push({ pieceId: carriedId, playerId: otherPlayer.id });
+              }
             }
           }
         }
